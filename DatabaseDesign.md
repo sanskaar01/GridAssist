@@ -239,8 +239,79 @@ INDEX(current_state)
 ```
 
 ---
+---
 
-# Table 4 — Devices
+# Architectural Refinement — Separation of Infrastructure and Runtime State
+
+During the design phase, the Pole entity was intentionally separated from its operational state.
+
+A pole is a physical infrastructure asset whose metadata changes very infrequently.
+
+Examples include:
+
+- GPS coordinates
+- Ward
+- Pincode
+- Pole type
+- Parent relationship
+- Transformer assignment
+
+These properties represent the electrical network itself.
+
+Operational state, however, changes continuously as telemetry arrives.
+
+Mixing both responsibilities into a single table introduces unnecessary write operations on infrastructure records and couples static network metadata with rapidly changing runtime information.
+
+GridAssist therefore stores operational state independently.
+
+This separation improves maintainability while better reflecting the distinction between physical assets and live system state.
+
+---
+
+# Table 4 — Pole State
+
+Represents the latest known operational status of every monitored pole.
+
+Unlike the Pole table, this entity changes continuously as telemetry is processed.
+
+| Column | Type |
+|----------|------|
+| pole_id | UUID FK |
+| current_state | ENUM(LIVE,DARK,UNKNOWN,OFFLINE) |
+| last_event | ENUM(POWER_LOST,POWER_RESTORED,HEARTBEAT) |
+| last_event_timestamp | TIMESTAMP |
+| last_updated | TIMESTAMP |
+
+Relationship
+
+```
+One Pole
+
+↓
+
+One Pole State
+```
+
+Purpose
+
+The Pole State table acts as the operational snapshot of the electrical network.
+
+The Localization Engine, Decision Engine and Dashboard all consume live information from this table rather than directly processing historical telemetry.
+
+The Telemetry Gateway is the only subsystem responsible for updating Pole State.
+
+Indexes
+
+```
+PRIMARY KEY(pole_id)
+
+INDEX(current_state)
+
+INDEX(last_updated)
+```
+
+
+# Table 5 — Devices
 
 Represents IoT devices installed on poles.
 
