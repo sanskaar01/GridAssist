@@ -10,7 +10,7 @@ interface Props {
 interface RenderNode {
   id: string;
   code: string;
-  type: 'TRANSFORMER' | 'POLE';
+  type: 'SUBSTATION' | 'TRANSFORMER' | 'POLE';
   transformerId: string;
   transformerCode: string;
   x: number;
@@ -35,41 +35,75 @@ interface RenderEdge {
   isEnergized: boolean;
 }
 
-// Fallback Default Topology Dataset with Irregular Realistic Feeder Tree Geometry
+// 47-Node Connected Electrical Network Dataset (SSOT: NETWORK_TOPOLOGY_SPEC.md)
 const FALLBACK_TRANSFORMERS: TransformerData[] = [
   {
     id: 'dt-fallback-01',
-    feederId: 'feeder-01',
+    feederId: 'F-07',
     transformerCode: 'D-0101',
     latitude: 12.9716,
     longitude: 77.6412,
     ward: 'W-084',
     status: 'ACTIVE',
     inferredEdges: [],
-    poles: [
-      { id: 'p-001', transformerId: 'dt-fallback-01', parentPoleId: null, sequenceNumber: 1, latitude: 12.9716, longitude: 77.6412, ward: 'W-084', pincode: '560078', poleType: 'STEEL', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-002', transformerId: 'dt-fallback-01', parentPoleId: 'p-001', sequenceNumber: 2, latitude: 12.9717, longitude: 77.6413, ward: 'W-084', pincode: '560078', poleType: 'STEEL', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-003', transformerId: 'dt-fallback-01', parentPoleId: 'p-002', sequenceNumber: 3, latitude: 12.9718, longitude: 77.6414, ward: 'W-084', pincode: '560078', poleType: 'STEEL', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-004', transformerId: 'dt-fallback-01', parentPoleId: 'p-003', sequenceNumber: 4, latitude: 12.9719, longitude: 77.6415, ward: 'W-084', pincode: '560078', poleType: 'STEEL', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-005', transformerId: 'dt-fallback-01', parentPoleId: 'p-002', sequenceNumber: 5, latitude: 12.9720, longitude: 77.6416, ward: 'W-084', pincode: '560078', poleType: 'STEEL', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-006', transformerId: 'dt-fallback-01', parentPoleId: 'p-005', sequenceNumber: 6, latitude: 12.9721, longitude: 77.6417, ward: 'W-084', pincode: '560078', poleType: 'STEEL', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-    ],
+    poles: Array.from({ length: 25 }, (_, i) => {
+      const num = i + 1;
+      const code = `P-${num.toString().padStart(3, '0')}`;
+      let parentPoleId: string | null = null;
+      if (num === 2 || num === 3 || num === 4) parentPoleId = `P-${(num - 1).toString().padStart(3, '0')}`;
+      else if (num === 5) parentPoleId = 'P-002'; // Branch split 1
+      else if (num >= 6 && num <= 12) parentPoleId = `P-${(num - 1).toString().padStart(3, '0')}`;
+      else if (num === 13) parentPoleId = 'P-001'; // Branch split 2 (Spur B)
+      else if (num >= 14 && num <= 25) parentPoleId = `P-${(num - 1).toString().padStart(3, '0')}`;
+
+      return {
+        id: code,
+        transformerId: 'dt-fallback-01',
+        parentPoleId,
+        sequenceNumber: num,
+        latitude: 12.9716 + num * 0.0001,
+        longitude: 77.6412 + num * 0.0001,
+        ward: 'W-084',
+        pincode: '560078',
+        poleType: num % 2 === 0 ? 'STEEL' : 'CONCRETE',
+        topologySource: 'SURVEYED',
+        currentState: 'LIVE',
+        hasDevice: true,
+      };
+    }),
   },
   {
     id: 'dt-fallback-02',
-    feederId: 'feeder-01',
+    feederId: 'F-07',
     transformerCode: 'D-0102',
     latitude: 12.9725,
     longitude: 77.6425,
     ward: 'W-085',
     status: 'ACTIVE',
     inferredEdges: [],
-    poles: [
-      { id: 'p-010', transformerId: 'dt-fallback-02', parentPoleId: null, sequenceNumber: 1, latitude: 12.9725, longitude: 77.6425, ward: 'W-085', pincode: '560078', poleType: 'CONCRETE', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-011', transformerId: 'dt-fallback-02', parentPoleId: 'p-010', sequenceNumber: 2, latitude: 12.9726, longitude: 77.6426, ward: 'W-085', pincode: '560078', poleType: 'CONCRETE', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-012', transformerId: 'dt-fallback-02', parentPoleId: 'p-011', sequenceNumber: 3, latitude: 12.9727, longitude: 77.6427, ward: 'W-085', pincode: '560078', poleType: 'CONCRETE', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-      { id: 'p-013', transformerId: 'dt-fallback-02', parentPoleId: 'p-010', sequenceNumber: 4, latitude: 12.9728, longitude: 77.6428, ward: 'W-085', pincode: '560078', poleType: 'CONCRETE', topologySource: 'SURVEYED', currentState: 'LIVE', hasDevice: true },
-    ],
+    poles: Array.from({ length: 20 }, (_, i) => {
+      const num = i + 26;
+      const code = `P-${num.toString().padStart(3, '0')}`;
+      let parentPoleId: string | null = null;
+      if (num >= 27 && num <= 35) parentPoleId = `P-${(num - 1).toString().padStart(3, '0')}`;
+      else if (num === 36) parentPoleId = 'P-026'; // Branch split (Spur D)
+      else if (num >= 37 && num <= 45) parentPoleId = `P-${(num - 1).toString().padStart(3, '0')}`;
+
+      return {
+        id: code,
+        transformerId: 'dt-fallback-02',
+        parentPoleId,
+        sequenceNumber: num,
+        latitude: 12.9725 + (num - 25) * 0.0001,
+        longitude: 77.6425 + (num - 25) * 0.0001,
+        ward: 'W-085',
+        pincode: '560078',
+        poleType: 'CONCRETE',
+        topologySource: 'SURVEYED',
+        currentState: 'LIVE',
+        hasDevice: true,
+      };
+    }),
   },
 ];
 
@@ -87,25 +121,55 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Animation frame flow offset
   const animOffsetRef = useRef<number>(0);
 
   const activeTransformers =
     transformers && transformers.length > 0 ? transformers : FALLBACK_TRANSFORMERS;
 
-  // Compute Realistic Asymmetric Feeder Graph Coordinates
+  // Compute 47-Node Asymmetric Feeder Graph Coordinates (SSOT: GRAPH_LAYOUT_ENGINE.md)
   const computeGraphLayout = useCallback((): { nodes: RenderNode[]; edges: RenderEdge[] } => {
     const nodes: RenderNode[] = [];
     const edges: RenderEdge[] = [];
+
+    // 1. Add Substation Node (SUB-01) at x:540, y:40
+    const subX = 540;
+    const subY = 40;
+    nodes.push({
+      id: 'sub-01',
+      code: 'SUB-01 (33kV)',
+      type: 'SUBSTATION',
+      transformerId: 'sub-01',
+      transformerCode: 'SUB-01',
+      x: subX,
+      y: subY,
+      state: 'LIVE',
+      isDark: false,
+      isSensorAnomaly: false,
+      parentPoleId: null,
+      ward: 'GRID MAIN',
+      pincode: '560078',
+    });
 
     const transformerSpacing = 580;
     const levelHeight = 85;
 
     activeTransformers.forEach((transformer, dtIdx) => {
       const dtX = 260 + dtIdx * transformerSpacing;
-      const dtY = 90;
+      const dtY = 130;
 
-      // Add Transformer Node
+      // Connect Substation SUB-01 to DT via Feeder Header F-07
+      edges.push({
+        fromId: 'sub-01',
+        toId: transformer.id,
+        fromX: subX,
+        fromY: subY,
+        toX: dtX,
+        toY: dtY,
+        isFaultSpan: false,
+        isEnergized: true,
+      });
+
+      // Add Transformer Node (Yellow Square)
       nodes.push({
         id: transformer.id,
         code: transformer.transformerCode,
@@ -143,7 +207,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       const rootWidth = Math.max(rootCount * 170, 220);
 
       rootPoles.forEach((rootPole, rootIdx) => {
-        // Asymmetric offset for realistic utility line geometry
         const xOffset = (rootIdx - (rootCount - 1) / 2) * (rootWidth / rootCount);
         const rootX = dtX + xOffset;
         const rootY = dtY + 90;
@@ -198,7 +261,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     const isDark = currentState === 'DARK';
     const children = childrenMap.get(pole.id) || [];
 
-    // Check for Sensor Anomaly (Isolated dark pole with live children)
     const isSensorAnomaly =
       isDark &&
       children.length > 0 &&
@@ -208,7 +270,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
 
     nodes.push({
       id: pole.id,
-      code: `P-${pole.id.substring(0, 6)}`,
+      code: pole.id.startsWith('P-') ? pole.id : `P-${pole.id.substring(0, 6)}`,
       type: 'POLE',
       transformerId: transformer.id,
       transformerCode: transformer.transformerCode,
@@ -225,18 +287,17 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
 
     if (children.length === 0) return;
 
-    // Asymmetric branch spreading for realistic utility feeder layout
     const spreadWidth = Math.max(90 * children.length, 100);
 
     children.forEach((child, idx) => {
-      // Irregular offset based on branch index
+      // Deterministic asymmetric skew: (-1)^idx * 15px
       const skew = idx % 2 === 0 ? -15 : 15;
       const childX = x - spreadWidth / 2 + (idx + 0.5) * (spreadWidth / children.length) + skew;
       const childY = y + lvlHeight + (idx % 2 === 0 ? 0 : 10);
 
       const childState = child.poleState?.currentState || child.currentState;
-      const parentCode = `P-${pole.id.substring(0, 6)}`;
-      const childCode = `P-${child.id.substring(0, 6)}`;
+      const parentCode = pole.id.startsWith('P-') ? pole.id : `P-${pole.id.substring(0, 6)}`;
+      const childCode = child.id.startsWith('P-') ? child.id : `P-${child.id.substring(0, 6)}`;
 
       let isFaultSpan = false;
       if (selectedInc && selectedInc.faultType === 'SPAN') {
@@ -248,7 +309,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         }
       }
 
-      // Sensor Anomaly does NOT stop power flow to children
       const isEnergized = isSensorAnomaly ? true : !isDark && childState !== 'DARK';
 
       edges.push({
@@ -278,7 +338,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     });
   };
 
-  // Main Canvas Render Loop
+  // Render Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -299,7 +359,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       const { nodes, edges } = computeGraphLayout();
       animOffsetRef.current = (animOffsetRef.current + 0.4) % 30;
 
-      // 1. DRAW EDGES (Electrical Spans & Power Flow Particles)
+      // 1. DRAW EDGES
       edges.forEach((edge) => {
         const isSelectedTransformer =
           selectedIncident &&
@@ -311,7 +371,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         ctx.globalAlpha = edgeOpacity;
 
         if (edge.isFaultSpan) {
-          // GLOWING RED FAULT FRONTIER SPAN
           ctx.strokeStyle = '#EF4444';
           ctx.lineWidth = 5;
           ctx.shadowColor = '#EF4444';
@@ -321,14 +380,12 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.lineTo(edge.toX, edge.toY);
           ctx.stroke();
 
-          // Animated pulse dashes
           ctx.setLineDash([8, 6]);
           ctx.lineDashOffset = -animOffsetRef.current * 1.5;
           ctx.strokeStyle = '#FCA5A5';
           ctx.lineWidth = 2;
           ctx.stroke();
         } else {
-          // NORMAL ELECTRICAL SPAN
           ctx.strokeStyle = edge.isEnergized ? '#10B981' : '#484F58';
           ctx.lineWidth = 2;
           ctx.shadowColor = edge.isEnergized ? 'rgba(16, 185, 129, 0.4)' : 'transparent';
@@ -338,7 +395,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.lineTo(edge.toX, edge.toY);
           ctx.stroke();
 
-          // ANIMATED POWER FLOW PARTICLES ON ENERGIZED LINES
           if (edge.isEnergized) {
             const dx = edge.toX - edge.fromX;
             const dy = edge.toY - edge.fromY;
@@ -364,7 +420,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         ctx.restore();
       });
 
-      // 2. DRAW NODES (Transformers & Poles)
+      // 2. DRAW NODES (Substation, Transformers, Poles)
       nodes.forEach((node) => {
         const isSelectedTransformer =
           selectedIncident && node.transformerId === selectedIncident.transformerId;
@@ -373,8 +429,28 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         ctx.save();
         ctx.globalAlpha = nodeOpacity;
 
-        if (node.type === 'TRANSFORMER') {
-          // Transformer: Yellow Industrial Square
+        if (node.type === 'SUBSTATION') {
+          // Substation Node: Dual-concentric Diamond in #3B82F6 (SSOT: NETWORK_TOPOLOGY_SPEC.md)
+          const size = 32;
+          ctx.save();
+          ctx.translate(node.x, node.y);
+          ctx.rotate(Math.PI / 4);
+
+          ctx.fillStyle = '#3B82F6';
+          ctx.shadowColor = '#3B82F6';
+          ctx.shadowBlur = 14;
+          ctx.fillRect(-size / 2, -size / 2, size, size);
+
+          ctx.strokeStyle = '#60A5FA';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(-size / 2 + 4, -size / 2 + 4, size - 8, size - 8);
+          ctx.restore();
+
+          ctx.fillStyle = '#93C5FD';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(node.code, node.x, node.y - 22);
+        } else if (node.type === 'TRANSFORMER') {
           const size = 24;
           const isDtFault = selectedIncident?.faultType === 'DT' && selectedIncident.transformerId === node.transformerId;
 
@@ -392,12 +468,10 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.textAlign = 'center';
           ctx.fillText(`DT ${node.code}`, node.x, node.y - 16);
         } else {
-          // Pole Node
           const isDark = node.isDark;
           const radius = 7;
 
           if (node.isSensorAnomaly) {
-            // SENSOR ANOMALY: Purple/Amber indicator (False Alarm Blocked)
             ctx.fillStyle = '#F59E0B';
             ctx.shadowColor = '#F59E0B';
             ctx.shadowBlur = 10;
@@ -415,7 +489,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          // Pole Code Label
           ctx.fillStyle = node.isSensorAnomaly ? '#FBBF24' : isDark ? '#FCA5A5' : '#8B949E';
           ctx.font = '10px monospace';
           ctx.textAlign = 'center';
@@ -437,7 +510,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     };
   }, [computeGraphLayout, panOffset, zoomLevel, selectedIncident]);
 
-  // Handle Resize
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current && canvasRef.current) {
@@ -522,9 +594,9 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       {/* DEVELOPER DEBUG DIAGNOSTICS OVERLAY */}
       <div className="absolute top-3 left-3 bg-[#161B22]/90 border border-[#30363D] px-3 py-2 rounded text-[10px] font-mono text-gray-300 backdrop-blur z-[1000] space-y-0.5 shadow-lg pointer-events-none">
         <div className="font-bold text-emerald-400 border-b border-[#30363D] pb-1 mb-1">
-          GRIDASSIST GRAPH DIAGNOSTICS
+          GRIDASSIST GRAPH DIAGNOSTICS (STAGE 1)
         </div>
-        <div>Feeders: <span className="text-white">2</span></div>
+        <div>Substation: <span className="text-blue-400">SUB-01 (33kV)</span></div>
         <div>Transformers: <span className="text-amber-400">{activeTransformers.length}</span></div>
         <div>Rendered Nodes: <span className="text-white">{nodes.length}</span></div>
         <div>Rendered Edges: <span className="text-white">{edges.length}</span></div>
@@ -543,7 +615,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           }}
         >
           <div className="font-bold text-amber-400">
-            {hoveredNode.type === 'TRANSFORMER' ? `DT ${hoveredNode.code}` : `POLE ${hoveredNode.code}`}
+            {hoveredNode.type === 'SUBSTATION' ? hoveredNode.code : hoveredNode.type === 'TRANSFORMER' ? `DT ${hoveredNode.code}` : `POLE ${hoveredNode.code}`}
           </div>
           <div>Status: <span className={hoveredNode.isDark ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{hoveredNode.state}</span></div>
           {hoveredNode.isSensorAnomaly && <div className="text-amber-400 font-bold">⚠ SENSOR ANOMALY (Live Children)</div>}
@@ -558,6 +630,12 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ELECTRICAL TOPOLOGY GRAPH SYMBOLS
         </div>
         <div className="flex items-center gap-2">
+          <span className="w-3.5 h-3.5 bg-blue-500 rotate-45 border border-white font-bold text-[7px] flex items-center justify-center text-white">
+            SUB
+          </span>
+          <span>33kV Substation (SUB-01)</span>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="w-3.5 h-3.5 bg-amber-500 rounded-sm border border-black font-bold text-[8px] flex items-center justify-center text-black">
             DT
           </span>
@@ -570,10 +648,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-rose-500 scada-pulse-node shadow-[0_0_6px_#EF4444]" />
           <span>Dark Pole Node (Outage)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_6px_#F59E0B]" />
-          <span>Sensor Anomaly (False Alarm Blocked)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-5 h-1 bg-emerald-500 rounded" />
