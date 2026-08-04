@@ -1,0 +1,273 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums matching Database.md
+enum TopologySource {
+  SURVEYED
+  INFERRED
+}
+
+enum PoleStateStatus {
+  LIVE
+  DARK
+  UNKNOWN
+  OFFLINE
+}
+
+enum DeviceStatus {
+  ACTIVE
+  OFFLINE
+  FAILED
+}
+
+enum TelemetryEventType {
+  POWER_LOST
+  POWER_RESTORED
+  HEARTBEAT
+}
+
+enum ConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum OutageScope {
+  FEEDER
+  TRANSFORMER
+}
+
+enum FaultType {
+  SPAN
+  DT
+  FEEDER
+  SENSOR
+  UNKNOWN
+}
+
+enum IncidentStatus {
+  ACTIVE
+  RESOLVED
+  VERIFYING
+  CLOSED
+}
+
+enum TicketStatus {
+  DETECTED
+  ACKNOWLEDGED
+  ASSIGNED
+  RESOLVED
+  VERIFYING
+  VERIFIED
+  CLOSED
+}
+
+enum CrewStatus {
+  AVAILABLE
+  ASSIGNED
+  OFFLINE
+}
+
+// Table 1 — Feeders
+model Feeder {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  feederCode              String                   @unique @map("feeder_code")
+  name                    String
+  substation              String
+  status                  String                   @default("ACTIVE")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  distributionTransformers DistributionTransformer[]
+
+  @@map("feeders")
+}
+
+// Table 2 — Distribution Transformers
+model DistributionTransformer {
+  id              String         @id @default(uuid()) @db.Uuid
+  feederId        String         @map("feeder_id") @db.Uuid
+  feeder          Feeder         @relation(fields: [feederId], references: [id])
+  transformerCode String         @unique @map("transformer_code")
+  latitude        Float
+  longitude       Float
+  ward            String
+  status          String         @default("ACTIVE")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  poles           Pole[]
+  inferredEdges   InferredEdge[]
+  incidents       Incident[]
+
+  @@index([feederId])
+  @@map("distribution_transformers")
+}
+
+// Table 3 — Poles
+model Pole {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  transformerId       String                  @map("transformer_id") @db.Uuid
+  transformer         DistributionTransformer @relation(fields: [transformerId], references: [id])
+  parentPoleId        String?                 @map("parent_pole_id") @db.Uuid
+  parentPole          Pole?                   @relation("PoleHierarchy", fields: [parentPoleId], references: [id])
+  childPoles          Pole[]                  @relation("PoleHierarchy")
+  sequenceNumber      Int?                    @map("sequence_number")
+  latitude            Float
+  longitude           Float
+  ward                String
+  pincode             String?
+  poleType            String                  @map("pole_type")
+  topologySource      TopologySource          @default(SURVEYED) @map("topology_source")
+  currentState        PoleStateStatus         @default(LIVE) @map("current_state")
+  hasDevice           Boolean                 @default(true) @map("has_device")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  poleState           PoleState?
+  device              Device?
+  parentInferredEdges InferredEdge[]          @relation("ParentPoleInferred")
+  childInferredEdges  InferredEdge[]          @relation("ChildPoleInferred")
+  parentIncidents     Incident[]              @relation("SuspectedParentPole")
+  childIncidents      Incident[]              @relation("SuspectedChildPole")
+
+  @@index([transformerId])
+  @@index([parentPoleId])
+  @@index([currentState])
+  @@map("poles")
+}
+
+// Table 4 — Pole State
+model PoleState {
+  poleId             String             @id @map("pole_id") @db.Uuid
+  pole               Pole               @relation(fields: [poleId], references: [id])
+  currentState       PoleStateStatus    @default(LIVE) @map("current_state")
+  lastEvent          TelemetryEventType? @map("last_event")
+  lastEventTimestamp DateTime?          @map("last_event_timestamp")
+  lastUpdated        DateTime           @default(now()) @updatedAt @map("last_updated")
+
+  @@index([currentState])
+  @@index([lastUpdated])
+  @@map("pole_states")
+}
+
+// Table 5 — Devices
+model Device {
+  id              String       @id @default(uuid()) @db.Uuid
+  poleId          String       @unique @map("pole_id") @db.Uuid
+  pole            Pole         @relation(fields: [poleId], references: [id])
+  deviceCode      String       @unique @map("device_code")
+  firmwareVersion String       @map("firmware_version")
+  batteryLevel    Int          @map("battery_level")
+  lastSeen        DateTime?    @map("last_seen")
+  status          DeviceStatus @default(ACTIVE)
+  installedAt     DateTime     @default(now()) @map("installed_at")
+  telemetry       Telemetry[]
+
+  @@map("devices")
+}
+
+// Table 6 — Telemetry
+model Telemetry {
+  id                String             @id @default(uuid()) @db.Uuid
+  deviceId          String             @map("device_id") @db.Uuid
+  device            Device             @relation(fields: [deviceId], references: [id])
+  eventType         TelemetryEventType @map("event_type")
+  eventTimestamp    DateTime           @map("event_timestamp")
+  receivedTimestamp DateTime           @default(now()) @map("received_timestamp")
+  sequenceNumber    Int                @map("sequence_number")
+  signalStrength    Int?               @map("signal_strength")
+  batteryLevel      Int?               @map("battery_level")
+  rawPayload        Json               @map("raw_payload")
+
+  @@index([deviceId])
+  @@index([eventTimestamp])
+  @@index([sequenceNumber])
+  @@map("telemetry")
+}
+
+// Table 7 — Inferred Edges
+model InferredEdge {
+  id            String                  @id @default(uuid()) @db.Uuid
+  transformerId String                  @map("transformer_id") @db.Uuid
+  transformer   DistributionTransformer @relation(fields: [transformerId], references: [id])
+  parentPoleId  String                  @map("parent_pole_id") @db.Uuid
+  parentPole    Pole                    @relation("ParentPoleInferred", fields: [parentPoleId], references: [id])
+  childPoleId   String                  @map("child_pole_id") @db.Uuid
+  childPole     Pole                    @relation("ChildPoleInferred", fields: [childPoleId], references: [id])
+  confidence    ConfidenceLevel         @default(MEDIUM)
+
+  @@index([transformerId])
+  @@map("inferred_edges")
+}
+
+// Table 8 — Scheduled Outages
+model ScheduledOutage {
+  id        String      @id @default(uuid()) @db.Uuid
+  scope     OutageScope
+  targetId  String      @map("target_id")
+  startTime DateTime    @map("start_time")
+  endTime   DateTime    @map("end_time")
+  reason    String
+
+  @@map("scheduled_outages")
+}
+
+// Table 9 — Incidents
+model Incident {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  faultType             FaultType               @map("fault_type")
+  transformerId         String                  @map("transformer_id") @db.Uuid
+  transformer           DistributionTransformer @relation(fields: [transformerId], references: [id])
+  suspectedParentPoleId String?                 @map("suspected_parent_pole") @db.Uuid
+  suspectedParentPole   Pole?                   @relation("SuspectedParentPole", fields: [suspectedParentPoleId], references: [id])
+  suspectedChildPoleId  String?                 @map("suspected_child_pole") @db.Uuid
+  suspectedChildPole    Pole?                   @relation("SuspectedChildPole", fields: [suspectedChildPoleId], references: [id])
+  confidence            ConfidenceLevel
+  evidence              Json
+  assumptions           Json
+  rejectedAlternatives  Json                    @map("rejected_alternatives")
+  recommendedAction     String                  @map("recommended_action")
+  affectedPoles         Int                     @map("affected_poles")
+  latitude              Float
+  longitude             Float
+  pincode               String
+  status                IncidentStatus          @default(ACTIVE)
+  detectedAt            DateTime                @default(now()) @map("detected_at")
+  lastObservedAt        DateTime                @default(now()) @map("last_observed_at")
+  resolvedAt            DateTime?               @map("resolved_at")
+  ticket                Ticket?
+
+  @@index([status])
+  @@index([transformerId])
+  @@map("incidents")
+}
+
+// Table 10 — Tickets
+model Ticket {
+  id             String       @id @default(uuid()) @db.Uuid
+  incidentId     String       @unique @map("incident_id") @db.Uuid
+  incident       Incident     @relation(fields: [incidentId], references: [id])
+  assignedCrewId String?      @map("assigned_crew_id") @db.Uuid
+  assignedCrew   Crew?        @relation(fields: [assignedCrewId], references: [id])
+  status         TicketStatus @default(DETECTED)
+  acknowledgedAt DateTime?    @map("acknowledged_at")
+  assignedAt     DateTime?    @map("assigned_at")
+  resolvedAt     DateTime?    @map("resolved_at")
+  verifiedAt     DateTime?    @map("verified_at")
+  closedAt       DateTime?    @map("closed_at")
+
+  @@map("tickets")
+}
+
+// Table 11 — Crew
+model Crew {
+  id            String     @id @default(uuid()) @db.Uuid
+  code          String     @unique
+  name          String
+  status        CrewStatus @default(AVAILABLE)
+  contactNumber String?    @map("contact_number")
+  tickets       Ticket[]
+
+  @@map("crews")
+}
