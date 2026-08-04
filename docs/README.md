@@ -1,6 +1,20 @@
 # GRIDASSIST ENGINEERING DOCUMENTATION DIRECTORY
 
-Welcome to the technical documentation directory for **GridAssist**. All architectural, algorithmic, visual, and operational specifications are indexed below.
+Welcome to the technical documentation directory for **GridAssist**. All architectural, algorithmic, experience layer, visual, and operational specifications are indexed below.
+
+---
+
+## 🎬 Experience Architecture & Cinematic Storytelling (NEW)
+- 📄 [Experience Architecture Layer Specification](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/EXPERIENCE_ARCHITECTURE.md)
+- 📄 [Scenario Choreography Master Timelines](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/SCENARIO_CHOREOGRAPHY.md)
+- 📄 [Camera Language & Viewport Matrix](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/CAMERA_LANGUAGE.md)
+- 📄 [Visual Attention Model & Selective Dimming](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/VISUAL_ATTENTION_MODEL.md)
+- 📄 [UI Information Hierarchy & Decluttering](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/UI_INFORMATION_HIERARCHY.md)
+- 📄 [Guided Demonstration Flow Engine](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/DEMONSTRATION_FLOW.md)
+- 📄 [Storyboard Architecture & Script Schemas](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/STORYBOARD_ARCHITECTURE.md)
+- 📄 [Motion Language & Physical Motion Rules](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/MOTION_LANGUAGE.md)
+- 📄 [UI Transition Timing & Easing Curves](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/TRANSITION_GUIDELINES.md)
+- 📄 [Scenario Cinematography & Framing Matrix](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/SCENARIO_CINEMATOGRAPHY.md)
 
 ---
 
@@ -26,20 +40,13 @@ Welcome to the technical documentation directory for **GridAssist**. All archite
 
 ---
 
-## 🎨 Operations Theater & Visualization Engine
+## 🎨 Operations Theater & Canvas Engine
 - 📄 [Visual Language & SCADA Tokens](file:///Users/piyushbaghel/Downloads/GridAssist/docs/operations-theater/VisualLanguage.md)
 - 📄 [Interaction Model & Direct Manipulation](file:///Users/piyushbaghel/Downloads/GridAssist/docs/operations-theater/InteractionModel.md)
 - 📄 [Animation Architecture & Keyframe Curves](file:///Users/piyushbaghel/Downloads/GridAssist/docs/operations-theater/AnimationArchitecture.md)
 - 📄 [Power Flow HTML5 Canvas Renderer](file:///Users/piyushbaghel/Downloads/GridAssist/docs/operations-theater/PowerFlowRenderer.md)
 - 📄 [Asymmetric Graph Layout Engine](file:///Users/piyushbaghel/Downloads/GridAssist/docs/operations-theater/GraphLayoutEngine.md)
 - 📄 [Particle System Physics Engine](file:///Users/piyushbaghel/Downloads/GridAssist/docs/operations-theater/ParticleSystem.md)
-
----
-
-## 🎬 Simulation & Demonstration Scenarios
-- 📄 [Scenario Runtime Architecture](file:///Users/piyushbaghel/Downloads/GridAssist/docs/scenarios/ScenarioRuntime.md)
-- 📄 [Cinematic Scenario Storyboards](file:///Users/piyushbaghel/Downloads/GridAssist/docs/scenarios/ScenarioStoryboards.md)
-- 📄 [Presenter Keynote & Demo Playbook](file:///Users/piyushbaghel/Downloads/GridAssist/docs/scenarios/DemoScript.md)
 
 ---
 
