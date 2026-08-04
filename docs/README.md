@@ -4,7 +4,15 @@ Welcome to the technical documentation directory for **GridAssist**. All archite
 
 ---
 
-## 🎬 Experience Architecture & Cinematic Storytelling (NEW)
+## 🏛️ SSOT Consolidation & Documentation Architecture (NEW)
+- 📄 [Single Source of Truth (SSOT) Matrix](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/SINGLE_SOURCE_OF_TRUTH_MATRIX.md)
+- 📄 [Documentation Dependency Graph (DAG)](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/DOCUMENTATION_DEPENDENCY_GRAPH.md)
+- 📄 [Network Topology Specification (47-Node Connected Tree SSOT)](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/NETWORK_TOPOLOGY_SPEC.md)
+- 📄 [Scenario Finite State Machine (FSM)](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/SCENARIO_STATE_MACHINE.md)
+
+---
+
+## 🎬 Experience Architecture & Cinematic Storytelling
 - 📄 [Experience Architecture Layer Specification](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/EXPERIENCE_ARCHITECTURE.md)
 - 📄 [Scenario Choreography Master Timelines](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/SCENARIO_CHOREOGRAPHY.md)
 - 📄 [Camera Language & Viewport Matrix](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/CAMERA_LANGUAGE.md)
