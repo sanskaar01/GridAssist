@@ -4,7 +4,14 @@ Welcome to the technical documentation directory for **GridAssist**. All archite
 
 ---
 
-## 🏛️ SSOT Consolidation & Documentation Architecture (NEW)
+## 🏆 Implementation Readiness Certification (NEW)
+- 📄 [Implementation Sequence & Open Document Matrix](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/IMPLEMENTATION_SEQUENCE.md)
+- 📄 [90-Second Evaluator Keynote Demo Script](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/90_SECOND_DEMO_SCRIPT.md)
+- 📄 [Network Topology Engineering Drawing Specification](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/NETWORK_TOPOLOGY_DRAWING.md)
+
+---
+
+## 🏛️ SSOT Consolidation & Documentation Architecture
 - 📄 [Single Source of Truth (SSOT) Matrix](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/SINGLE_SOURCE_OF_TRUTH_MATRIX.md)
 - 📄 [Documentation Dependency Graph (DAG)](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/DOCUMENTATION_DEPENDENCY_GRAPH.md)
 - 📄 [Network Topology Specification (47-Node Connected Tree SSOT)](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/NETWORK_TOPOLOGY_SPEC.md)
