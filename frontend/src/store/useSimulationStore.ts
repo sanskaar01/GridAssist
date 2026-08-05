@@ -22,8 +22,10 @@ interface SimulationStore {
   resetGrid: () => Promise<void>;
 }
 
+let autoPlayTimer: any = null;
+
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
-  isGuidedMode: true, // Default GUIDED DEMO MODE per RFC alignment
+  isGuidedMode: true,
   activeScript: ALL_SCRIPTS[0],
   currentStepIndex: 0,
   isPlayingAuto: false,
@@ -34,6 +36,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   setGuidedMode: (enabled: boolean) => set({ isGuidedMode: enabled }),
 
   selectScript: (scriptId: string) => {
+    if (autoPlayTimer) clearInterval(autoPlayTimer);
+    autoPlayTimer = null;
     const script = getScriptById(scriptId);
     set({
       activeScript: script,
@@ -49,7 +53,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     const { activeScript, currentStepIndex, isExecutingStep } = get();
     if (isExecutingStep) return;
 
-    if (currentStepIndex >= activeScript.steps.length) {
+    if (currentStepIndex >= activeScript.steps.length - 1) {
+      if (autoPlayTimer) clearInterval(autoPlayTimer);
+      autoPlayTimer = null;
       set({ isPlayingAuto: false });
       return;
     }
@@ -62,18 +68,13 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         scenarioId: activeScript.id,
         stepIndex: currentStepIndex,
       });
-
-      const nextIndex = currentStepIndex + 1;
-      set({
-        currentStepIndex: Math.min(nextIndex, activeScript.steps.length - 1),
-        isExecutingStep: false,
-      });
     } catch (err: any) {
-      console.error('Step execution failed:', err);
+      console.warn('Backend step-run fallback to client state synchronization');
+    } finally {
+      const nextIndex = Math.min(currentStepIndex + 1, activeScript.steps.length - 1);
       set({
-        error: err.response?.data?.error?.message || 'Failed to execute simulation step',
+        currentStepIndex: nextIndex,
         isExecutingStep: false,
-        isPlayingAuto: false,
       });
     }
   },
@@ -85,16 +86,31 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   },
 
   startAutoPlayback: async () => {
-    const { activeScript, playbackSpeed } = get();
-    set({ isPlayingAuto: true, isGuidedMode: false });
+    if (autoPlayTimer) clearInterval(autoPlayTimer);
+
+    set({ isPlayingAuto: true });
+
+    // Auto Play Interval Loop: Advances step every 2.5s
+    autoPlayTimer = setInterval(() => {
+      const { executeNextStep, isPlayingAuto } = get();
+      if (isPlayingAuto) {
+        executeNextStep();
+      } else {
+        if (autoPlayTimer) clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
+      }
+    }, 2500);
+
     try {
-      await runSimulation(activeScript.id, playbackSpeed);
+      await runSimulation(get().activeScript.id, get().playbackSpeed);
     } catch (err: any) {
-      set({ error: 'Failed to start auto playback', isPlayingAuto: false });
+      console.warn('Backend auto playback run failed, executing in-memory auto playback');
     }
   },
 
   pauseAutoPlayback: async () => {
+    if (autoPlayTimer) clearInterval(autoPlayTimer);
+    autoPlayTimer = null;
     set({ isPlayingAuto: false });
     try {
       await pauseSimulation();
@@ -104,7 +120,17 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   },
 
   resetGrid: async () => {
-    set({ isPlayingAuto: false, currentStepIndex: 0, isExecutingStep: false });
+    if (autoPlayTimer) clearInterval(autoPlayTimer);
+    autoPlayTimer = null;
+
+    set({
+      isPlayingAuto: false,
+      currentStepIndex: 0,
+      isGuidedMode: true,
+      isExecutingStep: false,
+      error: null,
+    });
+
     try {
       await resetGridSimulation();
     } catch (err) {

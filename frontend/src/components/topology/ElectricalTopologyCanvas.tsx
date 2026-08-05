@@ -731,8 +731,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
   };
 
   const { nodes, edges } = computeGraphLayout();
-  const canvasWidth = containerRef.current?.clientWidth || 800;
-  const canvasHeight = containerRef.current?.clientHeight || 600;
 
   return (
     <div
@@ -745,21 +743,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       onWheel={handleWheel}
     >
       <canvas ref={canvasRef} className="w-full h-full block" />
-
-      {/* DEVELOPER DEBUG DIAGNOSTICS OVERLAY */}
-      <div className="absolute top-3 left-3 bg-[#161B22]/90 border border-[#30363D] px-3 py-2 rounded text-[10px] font-mono text-gray-300 backdrop-blur z-[1000] space-y-0.5 shadow-lg pointer-events-none">
-        <div className="font-bold text-emerald-400 border-b border-[#30363D] pb-1 mb-1">
-          GRIDASSIST ANIMATED SCADA THEATER
-        </div>
-        <div>Substation: <span className="text-blue-400">SUB-01 (33kV)</span></div>
-        <div>Transformers: <span className="text-amber-400">{activeTransformers.length}</span></div>
-        <div>Rendered Nodes: <span className="text-white">{nodes.length}</span></div>
-        <div>Rendered Edges: <span className="text-white">{edges.length}</span></div>
-        <div>Particle Velocity: <span className="text-emerald-400 font-bold">45 px/s</span></div>
-        <div>Canvas Size: <span className="text-gray-400">{canvasWidth} x {canvasHeight}</span></div>
-        <div>Scale / Pan: <span className="text-gray-400">{zoomLevel.toFixed(2)}x ({Math.round(panOffset.x)}, {Math.round(panOffset.y)})</span></div>
-        <div>Selected Outage: <span className="text-rose-400">{selectedIncident ? selectedIncident.decisionCard?.transformerCode || 'Active' : 'None'}</span></div>
-      </div>
 
       {/* Hover Node Tooltip with PINCODE & Lineman Dispatch Action */}
       {hoveredNode && (
@@ -786,8 +769,14 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Floating SCADA Help Button & Contextual Legend */}
-      <SCADAHelpToggle />
+      {/* Floating SCADA Help & Diagnostics Buttons */}
+      <SCADAHelpToggle
+        renderedNodesCount={nodes.length}
+        renderedEdgesCount={edges.length}
+        selectedOutage={selectedIncident ? selectedIncident.decisionCard?.transformerCode || 'Active' : 'None'}
+        zoomLevel={zoomLevel}
+        panOffset={panOffset}
+      />
     </div>
   );
 };

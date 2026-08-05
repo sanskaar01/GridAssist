@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulationStore } from '../../store/useSimulationStore';
-import { ShieldCheck, ChevronRight, Activity, Zap, Cpu } from 'lucide-react';
+import { ShieldCheck, ChevronRight, Activity, Zap, Cpu, ChevronUp, ChevronDown } from 'lucide-react';
 
 export const OperationalNarrationHUD: React.FC = () => {
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
   const {
     isGuidedMode,
     activeScript,
@@ -26,9 +28,9 @@ export const OperationalNarrationHUD: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="bg-[#0D1117]/95 border-b-2 border-amber-500/60 px-4 py-2 text-xs font-mono text-gray-200 shadow-2xl backdrop-blur flex flex-col gap-1.5"
+        className="bg-[#0D1117]/95 border-b-2 border-amber-500/60 px-4 py-1.5 text-xs font-mono text-gray-200 shadow-2xl backdrop-blur flex flex-col gap-1"
       >
-        {/* Header Bar */}
+        {/* Header Bar with Collapse Toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 relative">
@@ -37,11 +39,30 @@ export const OperationalNarrationHUD: React.FC = () => {
             </span>
             <span className="font-bold text-amber-400 text-xs tracking-wider uppercase flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              OPERATIONAL MISSION BRIEFING — STEP {currentStepIndex + 1}/{activeScript.steps.length}
+              MISSION BRIEFING — STEP {currentStepIndex + 1}/{activeScript.steps.length}
             </span>
             <span className="text-[11px] text-gray-400 bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D]">
               {activeScript.title}
             </span>
+
+            {/* Collapse/Expand Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="text-[10px] text-gray-400 hover:text-amber-400 flex items-center gap-1 bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D] transition-colors ml-2"
+            >
+              {isCollapsed ? (
+                <>
+                  <span>EXPAND BRIEFING</span>
+                  <ChevronDown className="w-3 h-3 text-amber-400" />
+                </>
+              ) : (
+                <>
+                  <span>COLLAPSE BRIEFING</span>
+                  <ChevronUp className="w-3 h-3 text-amber-400" />
+                </>
+              )}
+            </button>
           </div>
 
           {/* Guided Step Button */}
@@ -57,39 +78,41 @@ export const OperationalNarrationHUD: React.FC = () => {
           )}
         </div>
 
-        {/* Mission Briefing Card Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#161B22] p-2.5 rounded border border-[#30363D]">
-          {/* Col 1: Telemetry Payload */}
-          <div className="space-y-1 border-r border-[#30363D]/60 pr-2">
-            <div className="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1">
-              <Activity className="w-3 h-3 text-blue-400" />
-              <span>INGESTED TELEMETRY</span>
+        {/* Mission Briefing Card Content (Collapsible) */}
+        {!isCollapsed && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#161B22] p-2 rounded border border-[#30363D] mt-0.5">
+            {/* Col 1: Telemetry Payload */}
+            <div className="space-y-0.5 border-r border-[#30363D]/60 pr-2">
+              <div className="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1">
+                <Activity className="w-3 h-3 text-blue-400" />
+                <span>INGESTED TELEMETRY</span>
+              </div>
+              <div className="text-white font-bold text-xs">{currentStep.deviceCode}</div>
+              <div className="text-[10px] text-rose-400 font-bold flex items-center gap-1">
+                <Zap className="w-3 h-3 fill-current" />
+                {currentStep.eventType} (Seq #{currentStep.sequenceNumber})
+              </div>
             </div>
-            <div className="text-white font-bold">{currentStep.deviceCode}</div>
-            <div className="text-[11px] text-rose-400 font-bold flex items-center gap-1">
-              <Zap className="w-3 h-3 fill-current" />
-              {currentStep.eventType} (Seq #{currentStep.sequenceNumber})
-            </div>
-          </div>
 
-          {/* Col 2: Event Details */}
-          <div className="space-y-1 border-r border-[#30363D]/60 pr-2">
-            <div className="text-[10px] text-gray-400 font-bold uppercase">EVENT DETAILS</div>
-            <div className="text-amber-300 font-bold text-xs">{narration.title}</div>
-            <div className="text-gray-300 text-[11px] leading-tight">{narration.detail}</div>
-          </div>
+            {/* Col 2: Event Details */}
+            <div className="space-y-0.5 border-r border-[#30363D]/60 pr-2">
+              <div className="text-[10px] text-gray-400 font-bold uppercase">EVENT DETAILS</div>
+              <div className="text-amber-300 font-bold text-xs">{narration.title}</div>
+              <div className="text-gray-300 text-[10px] leading-tight">{narration.detail}</div>
+            </div>
 
-          {/* Col 3: Algorithmic Reasoning Deduction */}
-          <div className="space-y-1">
-            <div className="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1">
-              <Cpu className="w-3 h-3 text-emerald-400" />
-              <span>ALGORITHMIC DEDUCTION</span>
-            </div>
-            <div className="text-emerald-300 text-[11px] leading-relaxed">
-              {narration.algorithmicReason}
+            {/* Col 3: Algorithmic Reasoning Deduction */}
+            <div className="space-y-0.5">
+              <div className="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1">
+                <Cpu className="w-3 h-3 text-emerald-400" />
+                <span>ALGORITHMIC DEDUCTION</span>
+              </div>
+              <div className="text-emerald-300 text-[10px] leading-relaxed">
+                {narration.algorithmicReason}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

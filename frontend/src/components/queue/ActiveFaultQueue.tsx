@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IncidentData } from '../../types';
 import { Search, ShieldAlert, CheckCircle2, MapPin } from 'lucide-react';
+import { useSimulationStore } from '../../store/useSimulationStore';
 
 interface Props {
   incidents: IncidentData[];
@@ -16,7 +17,86 @@ export const ActiveFaultQueue: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
 
-  const filteredIncidents = incidents.filter((inc) => {
+  const { isGuidedMode, activeScript, currentStepIndex } = useSimulationStore();
+  const currentStep = isGuidedMode && activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
+
+  // Construct Synthetic Guided Mode Incident when in Guided Mode
+  const guidedIncidents: IncidentData[] = [];
+  if (isGuidedMode && currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
+    const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-002';
+    const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-003';
+
+    guidedIncidents.push({
+      id: 'INC-GUIDED-01',
+      faultType: activeScript.category === 'DT_FAULT' ? 'DT' : activeScript.category === 'SENSOR_ANOMALY' ? 'SENSOR' : 'SPAN',
+      transformerId: 'dt-fallback-01',
+      suspectedParentPoleId: parentCode,
+      suspectedChildPoleId: childCode,
+      confidence: 'HIGH',
+      evidence: {
+        items: [
+          `IoT Sensor ${currentStep.deviceCode} emitted POWER_LOST (Seq #${currentStep.sequenceNumber})`,
+          `Downstream poles ${currentStep.expectedState.darkPoleCodes.join(', ')} dark`,
+          `Parent Pole ${parentCode} live; Fault frontier isolated on Span ${parentCode} -> ${childCode}`,
+        ],
+      },
+      assumptions: {
+        items: [
+          `Overhead conductor break isolated on Span ${parentCode} -> ${childCode}`,
+          `Parallel feeder branches operating normally`,
+        ],
+      },
+      rejectedAlternatives: {
+        items: [
+          { hypothesis: 'Distribution Transformer Blowout', reason: 'Parallel feeder poles remain energized' },
+          { hypothesis: 'Sensor Malfunction', reason: 'Multi-pole downstream cascade confirmed' },
+        ],
+      },
+      recommendedAction: `Dispatch Lineman Crew CREW-BLR-01 to Span ${parentCode} -> ${childCode} in Ward W-084 (PIN 560078).`,
+      affectedPoles: currentStep.expectedState.darkPoleCodes.length,
+      latitude: 12.9716,
+      longitude: 77.6412,
+      pincode: '560078',
+      status: 'ACTIVE',
+      detectedAt: new Date().toISOString(),
+      lastObservedAt: new Date().toISOString(),
+      decisionCard: {
+        id: 'DEC-GUIDED-01',
+        transformerId: 'dt-fallback-01',
+        transformerCode: 'D-0101',
+        faultType: activeScript.category === 'DT_FAULT' ? 'DT' : 'SPAN',
+        suspectedParentPoleCode: parentCode,
+        suspectedChildPoleCode: childCode,
+        confidence: 'HIGH',
+        confidenceReason: 'Deterministic telemetry cascade matching topological parent-child tree hierarchy.',
+        latitude: 12.9716,
+        longitude: 77.6412,
+        pincode: '560078',
+        affectedPolesCount: currentStep.expectedState.darkPoleCodes.length,
+        affectedPoleIds: currentStep.expectedState.darkPoleCodes,
+        evidence: [
+          `IoT Sensor ${currentStep.deviceCode} emitted POWER_LOST`,
+          `Downstream poles ${currentStep.expectedState.darkPoleCodes.join(', ')} dark`,
+          `Parent Pole ${parentCode} live; Fault frontier isolated`,
+        ],
+        assumptions: [`Overhead conductor break on Span ${parentCode} -> ${childCode}`],
+        rejectedAlternatives: [
+          { hypothesis: 'Transformer Blowout', reason: 'Parallel branches live' },
+        ],
+        recommendedAction: {
+          title: `Dispatch Lineman Crew to Span ${parentCode} -> ${childCode}`,
+          detail: `Dispatch Lineman Crew CREW-BLR-01 to Ward W-084 (PIN 560078).`,
+          targetCoordinates: { latitude: 12.9716, longitude: 77.6412 },
+          estimatedInspectionDistanceMeters: 45,
+        },
+        explanation: 'Deterministic graph traversal algorithm identified exact conductor break.',
+      },
+    });
+  }
+
+  const displayIncidents = incidents.length > 0 ? incidents : guidedIncidents;
+
+  const filteredIncidents = displayIncidents.filter((inc) => {
     const matchesSearch =
       inc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inc.pincode.includes(searchTerm) ||
@@ -42,7 +122,7 @@ export const ActiveFaultQueue: React.FC<Props> = ({
           <span>Active Fault Queue</span>
         </div>
         <span className="bg-rose-500/20 text-rose-400 font-mono font-bold px-2 py-0.5 rounded border border-rose-500/30">
-          {incidents.length} OUTAGES
+          {displayIncidents.length} OUTAGES
         </span>
       </div>
 
@@ -92,10 +172,10 @@ export const ActiveFaultQueue: React.FC<Props> = ({
           </div>
         ) : (
           filteredIncidents.map((inc) => {
-            const isSelected = inc.id === selectedIncidentId;
+            const isSelected = selectedIncidentId === null || inc.id === selectedIncidentId;
             const transformerCode = inc.decisionCard?.transformerCode || 'D-0101';
-            const parentCode = inc.decisionCard?.suspectedParentPoleCode || 'DT';
-            const childCode = inc.decisionCard?.suspectedChildPoleCode || 'P-ROOT';
+            const parentCode = inc.decisionCard?.suspectedParentPoleCode || 'P-002';
+            const childCode = inc.decisionCard?.suspectedChildPoleCode || 'P-003';
             const confidenceColor =
               inc.confidence === 'HIGH'
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
@@ -109,7 +189,7 @@ export const ActiveFaultQueue: React.FC<Props> = ({
                 onClick={() => onSelectIncident(inc)}
                 className={`p-2.5 cursor-pointer transition-colors font-mono relative ${
                   isSelected
-                    ? 'bg-[#21262D] border-l-4 border-l-rose-500 text-white'
+                    ? 'bg-[#21262D] border-l-4 border-l-rose-500 text-white shadow-lg'
                     : 'hover:bg-[#1C2128] text-gray-300'
                 }`}
               >
