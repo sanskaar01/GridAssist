@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulationStore } from '../../store/useSimulationStore';
-import { ShieldCheck, ChevronRight, Activity, Zap, Cpu, ChevronUp, ChevronDown } from 'lucide-react';
+import { ShieldCheck, ChevronRight, Activity, Zap, Cpu, ChevronUp, ChevronDown, CheckCircle2 } from 'lucide-react';
 
 export const OperationalNarrationHUD: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
@@ -11,6 +11,7 @@ export const OperationalNarrationHUD: React.FC = () => {
     activeScript,
     currentStepIndex,
     executeNextStep,
+    resetGrid,
     isExecutingStep,
   } = useSimulationStore();
 
@@ -19,6 +20,15 @@ export const OperationalNarrationHUD: React.FC = () => {
 
   const narration = currentStep.narration;
   const isLastStep = currentStepIndex >= activeScript.steps.length - 1;
+
+  const handleStepButtonClick = async () => {
+    if (isLastStep) {
+      setIsCollapsed(true);
+      await resetGrid();
+    } else {
+      await executeNextStep();
+    }
+  };
 
   return (
     <AnimatePresence mode="wait">
@@ -49,7 +59,7 @@ export const OperationalNarrationHUD: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsCollapsed((prev) => !prev)}
-              className="text-[10px] text-gray-400 hover:text-amber-400 flex items-center gap-1 bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D] transition-colors ml-2"
+              className="text-[10px] text-gray-400 hover:text-amber-400 flex items-center gap-1 bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D] transition-colors ml-2 cursor-pointer"
             >
               {isCollapsed ? (
                 <>
@@ -65,15 +75,28 @@ export const OperationalNarrationHUD: React.FC = () => {
             </button>
           </div>
 
-          {/* Guided Step Button */}
+          {/* Guided Step Button / Finish Scenario Button */}
           {isGuidedMode && (
             <button
               disabled={isExecutingStep}
-              onClick={executeNextStep}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1 rounded flex items-center gap-1 transition-all shadow-lg text-xs hover:scale-105 active:scale-95 disabled:opacity-50"
+              onClick={handleStepButtonClick}
+              className={`font-bold px-3 py-1 rounded flex items-center gap-1 transition-all shadow-lg text-xs hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer ${
+                isLastStep
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/30'
+                  : 'bg-amber-500 hover:bg-amber-400 text-black'
+              }`}
             >
-              <span>{isLastStep ? 'FINISH SCENARIO' : 'NEXT STEP'}</span>
-              <ChevronRight className="w-4 h-4" />
+              {isLastStep ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>FINISH SCENARIO</span>
+                </>
+              ) : (
+                <>
+                  <span>NEXT STEP</span>
+                  <ChevronRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           )}
         </div>
