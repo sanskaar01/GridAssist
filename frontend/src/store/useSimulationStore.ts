@@ -43,8 +43,11 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       activeScript: script,
       currentStepIndex: 0,
       isPlayingAuto: false,
+      isGuidedMode: true,
+      isExecutingStep: false,
       error: null,
     });
+    resetGridSimulation().catch((err) => console.error('Failed to reset backend grid on scenario select:', err));
   },
 
   setPlaybackSpeed: (speed: number) => set({ playbackSpeed: speed }),

@@ -587,7 +587,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.fillText(node.code, node.x, node.y - 22);
         } else if (node.type === 'TRANSFORMER') {
           const size = 24;
-          const isDtScriptDark = activeScript.category === 'DT_FAULT' && currentStepIndex > 0 && node.code === 'D-0102';
+          const isDtScriptDark = activeScript.id === 'transformer-failure' && currentStepIndex > 0 && currentStepIndex < activeScript.steps.length - 1 && node.code === 'D-0102';
           const isDtFault = isDtScriptDark || (selectedIncident?.faultType === 'DT' && selectedIncident.transformerId === node.transformerId);
 
           ctx.fillStyle = isDtFault ? '#EF4444' : '#F59E0B';
@@ -604,8 +604,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.textAlign = 'center';
           ctx.fillText(`DT ${node.code}`, node.x, node.y - 16);
 
-          // Voltage Loss Badge Overlay for D-0102 Output Failure
-          if (isDtFault) {
+          // Voltage Loss Badge Overlay for D-0102 Output Failure (Strictly in Scenario 2)
+          if (isDtScriptDark) {
             const badgeX = node.x + 22;
             const badgeY = node.y - 10;
             const badgeW = 120;
@@ -626,10 +626,10 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           }
         } else {
           // Pole Node with 1.8s Dark Radial Pulse (SSOT: ELECTRICAL_EFFECTS_SPEC.md)
-          const isSensorAnomalyMode = activeScript.category === 'SENSOR_ANOMALY' && currentStepIndex >= 1 && currentStepIndex <= 2 && node.code === 'P-003';
+          const isSensorAnomalyMode = activeScript.id === 'sensor-failure' && currentStepIndex >= 1 && currentStepIndex <= 2 && node.code === 'P-003';
           const isDark = node.isDark && !isSensorAnomalyMode;
 
-          if (isSensorAnomalyMode || node.isSensorAnomaly) {
+          if (isSensorAnomalyMode) {
             // SENSOR ANOMALY: Live Green Pole Node + Pulsing Amber Warning Ring
             const ringPulse = 10 + 4 * Math.sin(animTimeRef.current * 5);
             ctx.strokeStyle = '#F59E0B';
