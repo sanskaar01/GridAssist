@@ -122,7 +122,27 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const animOffsetRef = useRef<number>(0);
+  // Particle & Keyframe Time Reference
+  const animTimeRef = useRef<number>(0);
+
+  // Camera Animation Matrix State
+  const cameraAnimRef = useRef<{
+    active: boolean;
+    startTime: number;
+    duration: number;
+    startPan: { x: number; y: number };
+    targetPan: { x: number; y: number };
+    startZoom: number;
+    targetZoom: number;
+  }>({
+    active: false,
+    startTime: 0,
+    duration: 650,
+    startPan: { x: 50, y: 30 },
+    targetPan: { x: 50, y: 30 },
+    startZoom: 1.0,
+    targetZoom: 1.0,
+  });
 
   const activeTransformers =
     transformers && transformers.length > 0 ? transformers : FALLBACK_TRANSFORMERS;
@@ -132,7 +152,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     const nodes: RenderNode[] = [];
     const edges: RenderEdge[] = [];
 
-    // 1. Add Substation Node (SUB-01) at x:540, y:40
+    // Substation Node (SUB-01) at x:540, y:40
     const subX = 540;
     const subY = 40;
     nodes.push({
@@ -147,7 +167,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       isDark: false,
       isSensorAnomaly: false,
       parentPoleId: null,
-      ward: 'GRID MAIN',
+      ward: 'SUBSTATION CONTROL',
       pincode: '560078',
     });
 
@@ -158,7 +178,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       const dtX = 260 + dtIdx * transformerSpacing;
       const dtY = 130;
 
-      // Connect Substation SUB-01 to DT via Feeder Header F-07
+      // Connect Substation to DT via Feeder F-07
       edges.push({
         fromId: 'sub-01',
         toId: transformer.id,
@@ -170,7 +190,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         isEnergized: true,
       });
 
-      // Add Transformer Node (Yellow Square)
+      // Add Transformer Node (Yellow Industrial Square)
       nodes.push({
         id: transformer.id,
         code: transformer.transformerCode,
@@ -291,7 +311,6 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     const spreadWidth = Math.max(90 * children.length, 100);
 
     children.forEach((child, idx) => {
-      // Deterministic asymmetric skew: (-1)^idx * 15px
       const skew = idx % 2 === 0 ? -15 : 15;
       const childX = x - spreadWidth / 2 + (idx + 0.5) * (spreadWidth / children.length) + skew;
       const childY = y + lvlHeight + (idx % 2 === 0 ? 0 : 10);
@@ -339,7 +358,56 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     });
   };
 
-  // Render Loop
+  // Camera Auto-Pan Trigger on Incident Selection (SSOT: CAMERA_ANIMATION_SPEC.md)
+  useEffect(() => {
+    if (!selectedIncident) {
+      // Smooth return to default overview bounds (650ms Quartic Out)
+      cameraAnimRef.current = {
+        active: true,
+        startTime: performance.now(),
+        duration: 650,
+        startPan: { ...panOffset },
+        targetPan: { x: 50, y: 30 },
+        startZoom: zoomLevel,
+        targetZoom: 1.0,
+      };
+      return;
+    }
+
+    const { nodes, edges } = computeGraphLayout();
+    let targetNode: RenderNode | undefined;
+
+    if (selectedIncident.faultType === 'SPAN') {
+      const faultEdge = edges.find((e) => e.isFaultSpan);
+      if (faultEdge) {
+        targetNode = nodes.find((n) => n.id === faultEdge.toId);
+      }
+    } else {
+      targetNode = nodes.find((n) => n.transformerId === selectedIncident.transformerId);
+    }
+
+    if (targetNode && containerRef.current) {
+      const W = containerRef.current.clientWidth;
+      const H = containerRef.current.clientHeight;
+      const targetZoom = 1.45;
+
+      // Quartic Offset Centroid Formula (SSOT: CAMERA_ANIMATION_SPEC.md)
+      const targetDx = W / 2 - targetNode.x * targetZoom;
+      const targetDy = H / 3.2 - targetNode.y * targetZoom;
+
+      cameraAnimRef.current = {
+        active: true,
+        startTime: performance.now(),
+        duration: 650,
+        startPan: { ...panOffset },
+        targetPan: { x: targetDx, y: targetDy },
+        startZoom: zoomLevel,
+        targetZoom: targetZoom,
+      };
+    }
+  }, [selectedIncident, computeGraphLayout]);
+
+  // Main Canvas Render Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -349,44 +417,75 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
 
     let animationFrameId: number;
 
-    const render = () => {
+    const render = (time: number) => {
       const { width, height } = canvas;
       ctx.clearRect(0, 0, width, height);
+
+      // 1. PROCESS CAMERA ANIMATION MATRIX (650ms Quartic Out)
+      if (cameraAnimRef.current.active) {
+        const elapsed = time - cameraAnimRef.current.startTime;
+        const progress = Math.min(1.0, elapsed / cameraAnimRef.current.duration);
+
+        // Quartic Out Easing: f(t) = 1 - (1 - t)^4
+        const eased = 1 - Math.pow(1 - progress, 4);
+
+        const currentZoom =
+          cameraAnimRef.current.startZoom +
+          (cameraAnimRef.current.targetZoom - cameraAnimRef.current.startZoom) * eased;
+        const currentPanX =
+          cameraAnimRef.current.startPan.x +
+          (cameraAnimRef.current.targetPan.x - cameraAnimRef.current.startPan.x) * eased;
+        const currentPanY =
+          cameraAnimRef.current.startPan.y +
+          (cameraAnimRef.current.targetPan.y - cameraAnimRef.current.startPan.y) * eased;
+
+        setZoomLevel(currentZoom);
+        setPanOffset({ x: currentPanX, y: currentPanY });
+
+        if (progress >= 1.0) {
+          cameraAnimRef.current.active = false;
+        }
+      }
 
       ctx.save();
       ctx.translate(panOffset.x, panOffset.y);
       ctx.scale(zoomLevel, zoomLevel);
 
       const { nodes, edges } = computeGraphLayout();
-      animOffsetRef.current = (animOffsetRef.current + 0.4) % 30;
+      animTimeRef.current = time / 1000; // time in seconds
 
-      // 1. DRAW EDGES
+      // 2. DRAW EDGES (Electrical Spans & Current Particles)
       edges.forEach((edge) => {
         const isSelectedTransformer =
           selectedIncident &&
           nodes.find((n) => n.id === edge.fromId)?.transformerId === selectedIncident.transformerId;
 
-        const edgeOpacity = selectedIncident === null || isSelectedTransformer ? 1 : 0.25;
+        // Visual Attention Model: Dim unrelated branches to 15% opacity
+        const edgeOpacity = selectedIncident === null || isSelectedTransformer ? 1 : 0.15;
 
         ctx.save();
         ctx.globalAlpha = edgeOpacity;
 
         if (edge.isFaultSpan) {
+          // FAULT FRONTIER RED GLOW POLYLINE (SSOT: ELECTRICAL_EFFECTS_SPEC.md)
+          const glowPulse = 6 + 10 * Math.sin(animTimeRef.current * 4);
           ctx.strokeStyle = '#EF4444';
           ctx.lineWidth = 5;
           ctx.shadowColor = '#EF4444';
-          ctx.shadowBlur = 16;
+          ctx.shadowBlur = glowPulse;
           ctx.beginPath();
           ctx.moveTo(edge.fromX, edge.fromY);
           ctx.lineTo(edge.toX, edge.toY);
           ctx.stroke();
 
+          // Animated crimson dash offset
           ctx.setLineDash([8, 6]);
-          ctx.lineDashOffset = -animOffsetRef.current * 1.5;
+          ctx.lineDashOffset = -animTimeRef.current * 45;
           ctx.strokeStyle = '#FCA5A5';
           ctx.lineWidth = 2;
           ctx.stroke();
         } else {
+          // NORMAL ELECTRICAL SPAN
           ctx.strokeStyle = edge.isEnergized ? '#10B981' : '#484F58';
           ctx.lineWidth = 2;
           ctx.shadowColor = edge.isEnergized ? 'rgba(16, 185, 129, 0.4)' : 'transparent';
@@ -396,18 +495,23 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.lineTo(edge.toX, edge.toY);
           ctx.stroke();
 
+          // ENERGIZED CURRENT FLOW PARTICLES (45 px/s, SSOT: PARTICLE_PHYSICS_SPEC.md)
           if (edge.isEnergized) {
             const dx = edge.toX - edge.fromX;
             const dy = edge.toY - edge.fromY;
             const distance = Math.hypot(dx, dy);
 
             if (distance > 0) {
+              const velocity = 45; // 45 px/s
               const particleCount = 2;
+
               for (let i = 0; i < particleCount; i++) {
-                const progress = ((animOffsetRef.current * 1.3 + i * (distance / particleCount)) % distance) / distance;
+                const offset = i * (distance / particleCount);
+                const progress = ((animTimeRef.current * velocity + offset) % distance) / distance;
                 const px = edge.fromX + dx * progress;
                 const py = edge.fromY + dy * progress;
 
+                // Bright Mint Emerald Current Dot (#6EE7B7)
                 ctx.fillStyle = '#6EE7B7';
                 ctx.shadowColor = '#10B981';
                 ctx.shadowBlur = 6;
@@ -421,11 +525,11 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         ctx.restore();
       });
 
-      // 2. DRAW NODES (Substation, Transformers, Poles)
+      // 3. DRAW NODES (Substation, Transformers, Poles)
       nodes.forEach((node) => {
         const isSelectedTransformer =
           selectedIncident && node.transformerId === selectedIncident.transformerId;
-        const nodeOpacity = selectedIncident === null || isSelectedTransformer ? 1 : 0.3;
+        const nodeOpacity = selectedIncident === null || isSelectedTransformer ? 1 : 0.2;
 
         ctx.save();
         ctx.globalAlpha = nodeOpacity;
@@ -469,22 +573,38 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.textAlign = 'center';
           ctx.fillText(`DT ${node.code}`, node.x, node.y - 16);
         } else {
+          // Pole Node with 1.8s Dark Radial Pulse (SSOT: ELECTRICAL_EFFECTS_SPEC.md)
           const isDark = node.isDark;
-          const radius = 7;
 
           if (node.isSensorAnomaly) {
+            // SENSOR ANOMALY: Amber Warning Ring
             ctx.fillStyle = '#F59E0B';
             ctx.shadowColor = '#F59E0B';
             ctx.shadowBlur = 10;
-          } else {
-            ctx.fillStyle = isDark ? '#EF4444' : '#10B981';
-            ctx.shadowColor = isDark ? '#EF4444' : '#10B981';
-            ctx.shadowBlur = isDark ? 12 : 5;
-          }
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (isDark) {
+            // DARK OUTAGE POLE: 1.8s Radial Pulse Sine Wave R(t) = 7 * (1 + 0.25 * sin(2pi t / 1.8))
+            const pulseScale = 1 + 0.25 * Math.sin((2 * Math.PI * animTimeRef.current) / 1.8);
+            const radius = 7 * pulseScale;
+            const shadow = 6 + 14 * Math.pow(Math.sin((Math.PI * animTimeRef.current) / 1.8), 2);
 
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-          ctx.fill();
+            ctx.fillStyle = '#EF4444';
+            ctx.shadowColor = '#EF4444';
+            ctx.shadowBlur = shadow;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // LIVE POLE NODE (Emerald Green)
+            ctx.fillStyle = '#10B981';
+            ctx.shadowColor = '#10B981';
+            ctx.shadowBlur = 5;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
           ctx.strokeStyle = '#0D1117';
           ctx.lineWidth = 1.5;
@@ -504,7 +624,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       animationFrameId = requestAnimationFrame(render);
     };
 
-    render();
+    animationFrameId = requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
@@ -524,6 +644,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Manual drag cancels camera auto-pan matrix (SSOT: CAMERA_ANIMATION_SPEC.md)
+    cameraAnimRef.current.active = false;
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
@@ -571,9 +693,11 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
   };
 
   const handleWheel = (e: React.WheelEvent) => {
+    // Wheel zoom cancels auto-pan
+    cameraAnimRef.current.active = false;
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoomLevel((prev) => Math.max(0.6, Math.min(2.5, prev * zoomFactor)));
+    setZoomLevel((prev) => Math.max(0.5, Math.min(2.5, prev * zoomFactor)));
   };
 
   const { nodes, edges } = computeGraphLayout();
@@ -595,33 +719,40 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       {/* DEVELOPER DEBUG DIAGNOSTICS OVERLAY */}
       <div className="absolute top-3 left-3 bg-[#161B22]/90 border border-[#30363D] px-3 py-2 rounded text-[10px] font-mono text-gray-300 backdrop-blur z-[1000] space-y-0.5 shadow-lg pointer-events-none">
         <div className="font-bold text-emerald-400 border-b border-[#30363D] pb-1 mb-1">
-          GRIDASSIST GRAPH DIAGNOSTICS (STAGE 1)
+          GRIDASSIST ANIMATED SCADA THEATER
         </div>
         <div>Substation: <span className="text-blue-400">SUB-01 (33kV)</span></div>
         <div>Transformers: <span className="text-amber-400">{activeTransformers.length}</span></div>
         <div>Rendered Nodes: <span className="text-white">{nodes.length}</span></div>
         <div>Rendered Edges: <span className="text-white">{edges.length}</span></div>
+        <div>Particle Velocity: <span className="text-emerald-400 font-bold">45 px/s</span></div>
         <div>Canvas Size: <span className="text-gray-400">{canvasWidth} x {canvasHeight}</span></div>
         <div>Scale / Pan: <span className="text-gray-400">{zoomLevel.toFixed(2)}x ({Math.round(panOffset.x)}, {Math.round(panOffset.y)})</span></div>
         <div>Selected Outage: <span className="text-rose-400">{selectedIncident ? selectedIncident.decisionCard?.transformerCode || 'Active' : 'None'}</span></div>
       </div>
 
-      {/* Hover Node Tooltip */}
+      {/* Hover Node Tooltip with PINCODE & Lineman Dispatch Action */}
       {hoveredNode && (
         <div
-          className="absolute pointer-events-none bg-[#161B22]/95 border border-[#30363D] p-2.5 rounded text-xs font-mono text-gray-200 shadow-2xl backdrop-blur z-[1000]"
+          className="absolute pointer-events-none bg-[#161B22]/95 border border-[#30363D] p-3 rounded-xl text-xs font-mono text-gray-200 shadow-2xl backdrop-blur z-[1000] min-w-[210px] space-y-1"
           style={{
             left: hoveredNode.x * zoomLevel + panOffset.x + 15,
             top: hoveredNode.y * zoomLevel + panOffset.y - 15,
           }}
         >
-          <div className="font-bold text-amber-400">
-            {hoveredNode.type === 'SUBSTATION' ? hoveredNode.code : hoveredNode.type === 'TRANSFORMER' ? `DT ${hoveredNode.code}` : `POLE ${hoveredNode.code}`}
+          <div className="font-bold text-amber-400 border-b border-[#30363D] pb-1 flex justify-between items-center">
+            <span>{hoveredNode.type === 'SUBSTATION' ? hoveredNode.code : hoveredNode.type === 'TRANSFORMER' ? `DT ${hoveredNode.code}` : `POLE ${hoveredNode.code}`}</span>
+            <span className="text-[10px] text-gray-400 font-normal">{hoveredNode.type}</span>
           </div>
-          <div>Status: <span className={hoveredNode.isDark ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{hoveredNode.state}</span></div>
-          {hoveredNode.isSensorAnomaly && <div className="text-amber-400 font-bold">⚠ SENSOR ANOMALY (Live Children)</div>}
-          <div>Ward: {hoveredNode.ward}</div>
-          <div>PIN: {hoveredNode.pincode || '560078'}</div>
+          <div>Status: <span className={hoveredNode.isDark ? 'text-rose-400 font-bold shadow-rose-500' : 'text-emerald-400 font-bold'}>{hoveredNode.state}</span></div>
+          {hoveredNode.isSensorAnomaly && <div className="text-amber-400 font-bold text-[10px]">⚠ SENSOR ANOMALY (Live Children)</div>}
+          <div>Ward: <span className="text-white">{hoveredNode.ward}</span></div>
+          <div>PINCODE: <span className="text-emerald-400 font-bold">{hoveredNode.pincode || '560078'}</span></div>
+          {hoveredNode.isDark && (
+            <div className="mt-1.5 pt-1 border-t border-[#30363D] text-[10px] text-blue-400 flex items-center gap-1 font-bold animate-pulse">
+              ⚡ LINEMAN CREW DISPATCH READY
+            </div>
+          )}
         </div>
       )}
 
