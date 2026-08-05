@@ -57,11 +57,7 @@ export const ControlRoomPage: React.FC = () => {
   return (
     <div className="h-screen w-screen bg-[#0B0E14] flex flex-col overflow-hidden font-sans select-none">
       {/* Top Status Bar & Embedded Simulation Control Panel */}
-      <ControlRoomHeader
-        systemStatus={data?.systemStatus}
-        pipeline={data?.pipeline}
-        onRefreshData={loadData}
-      />
+      <ControlRoomHeader onRefreshData={loadData} />
 
       {error && (
         <div className="bg-rose-950/80 text-rose-300 border-b border-rose-500/30 px-4 py-1 text-xs font-mono text-center">

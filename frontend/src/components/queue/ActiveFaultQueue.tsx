@@ -121,9 +121,14 @@ export const ActiveFaultQueue: React.FC<Props> = ({
           <ShieldAlert className="w-4 h-4 text-rose-500" />
           <span>Active Fault Queue</span>
         </div>
-        <span className="bg-rose-500/20 text-rose-400 font-mono font-bold px-2 py-0.5 rounded border border-rose-500/30">
-          {displayIncidents.length} OUTAGES
-        </span>
+        <div className="flex items-center gap-1.5 font-mono text-[10px]">
+          <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded border border-rose-500/30">
+            {displayIncidents.length} OUTAGES
+          </span>
+          <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+            TICKETS: {displayIncidents.length}
+          </span>
+        </div>
       </div>
 
       {/* Search and Filters */}
