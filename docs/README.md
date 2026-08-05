@@ -1,17 +1,16 @@
 # GRIDASSIST ENGINEERING DOCUMENTATION DIRECTORY
 
-Welcome to the technical documentation directory for **GridAssist**. All architectural, algorithmic, animation blueprint, visual, and operational specifications are indexed below.
+Welcome to the technical documentation directory for **GridAssist**. All architectural, algorithmic, experience layer, animation, and visual storytelling specifications are indexed below.
 
 ---
 
-## 🎬 Animation Implementation Master Blueprint & Design Freeze (CONSOLIDATED)
+## 🚀 Demo-First Experience Blueprint & Visual Storytelling (NEW)
+- 📄 [Demo-First Experience Blueprint — Making GridAssist Feel Alive](file:///Users/piyushbaghel/Downloads/GridAssist/docs/experience/DEMO_FIRST_EXPERIENCE_BLUEPRINT.md)
 - 📄 [Animation Implementation Master Blueprint (SSOT)](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/ANIMATION_MASTER_BLUEPRINT.md)
 - 📄 [Camera Animation & Viewport Matrix Specification](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/CAMERA_ANIMATION_SPEC.md)
 - 📄 [Particle Physics & Power Flow Halting Specification](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/PARTICLE_PHYSICS_SPEC.md)
 - 📄 [Electrical Effects & Fault Glow Signatures](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/ELECTRICAL_EFFECTS_SPEC.md)
-- 📄 [Storyboard Timelines & Interruption Contract](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/STORYBOARD_TIMELINE_SPEC.md)
 - 📄 [Floating (?) SCADA Help Toggle Specification](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/SCADA_HELP_TOGGLE_SPEC.md)
-- 📄 [Technology Stack Readiness & 60 FPS Audit](file:///Users/piyushbaghel/Downloads/GridAssist/docs/animation/TECH_STACK_VALIDATION.md)
 
 ---
 
