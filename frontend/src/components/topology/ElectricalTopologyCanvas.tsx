@@ -777,6 +777,65 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         zoomLevel={zoomLevel}
         panOffset={panOffset}
       />
+
+      {/* Floating Map Traversal & Zoom Controls Bar (+ / - / RECENTER) */}
+      <div className="absolute bottom-4 right-4 z-[1000] flex items-center gap-1.5 bg-[#161B22]/90 border border-[#30363D] p-1.5 rounded-xl backdrop-blur shadow-2xl font-mono select-none">
+        {/* Zoom Out Button (-) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            cameraAnimRef.current.active = false;
+            setZoomLevel((prev) => Math.max(0.5, prev - 0.25));
+          }}
+          className="w-8 h-8 flex items-center justify-center bg-[#0D1117] hover:bg-[#21262D] text-gray-300 hover:text-white rounded-lg border border-[#30363D] transition-all active:scale-95 text-base font-bold shadow cursor-pointer"
+          title="Zoom Out (-)"
+        >
+          -
+        </button>
+
+        {/* Current Zoom Level Badge */}
+        <span className="px-2 text-[11px] font-bold text-emerald-400 min-w-[45px] text-center">
+          {Math.round(zoomLevel * 100)}%
+        </span>
+
+        {/* Zoom In Button (+) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            cameraAnimRef.current.active = false;
+            setZoomLevel((prev) => Math.min(2.5, prev + 0.25));
+          }}
+          className="w-8 h-8 flex items-center justify-center bg-[#0D1117] hover:bg-[#21262D] text-gray-300 hover:text-white rounded-lg border border-[#30363D] transition-all active:scale-95 text-base font-bold shadow cursor-pointer"
+          title="Zoom In (+)"
+        >
+          +
+        </button>
+
+        <div className="w-px h-5 bg-[#30363D] mx-0.5" />
+
+        {/* Recenter Grid Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            cameraAnimRef.current = {
+              active: true,
+              startTime: performance.now(),
+              duration: 650,
+              startPan: { ...panOffset },
+              targetPan: { x: 50, y: 30 },
+              startZoom: zoomLevel,
+              targetZoom: 1.0,
+            };
+          }}
+          className="px-2.5 h-8 flex items-center gap-1 bg-[#0D1117] hover:bg-[#21262D] text-amber-400 hover:text-amber-300 rounded-lg border border-[#30363D] transition-all active:scale-95 text-[11px] font-bold shadow cursor-pointer"
+          title="Recenter Grid View (100%)"
+        >
+          <span>🎯 RECENTER</span>
+        </button>
+      </div>
     </div>
   );
 };
