@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: gridassist-backend
+    env: node
+    buildCommand: npm --prefix backend install && npm --prefix backend run build
+    startCommand: npm --prefix backend start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gridassist-db
+          property: connectionString
+
+databases:
+  - name: gridassist-db
+    databaseName: gridassist
+    user: gridassist_user
+    plan: free
