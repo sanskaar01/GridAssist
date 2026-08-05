@@ -20,12 +20,12 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
   const [selectedCrewId, setSelectedCrewId] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
-  const { isGuidedMode, activeScript, currentStepIndex } = useSimulationStore();
-  const currentStep = isGuidedMode && activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
+  const { activeScript, currentStepIndex } = useSimulationStore();
+  const currentStep = activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
 
-  // Construct Fallback Guided Incident for Right Panel during Guided Mode
+  // Construct Fallback Guided Incident for Right Panel during Guided Mode or Auto Play
   let activeIncident = selectedIncident;
-  if (!activeIncident && isGuidedMode && currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
+  if (!activeIncident && currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
     const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-003';
     const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-004';
 

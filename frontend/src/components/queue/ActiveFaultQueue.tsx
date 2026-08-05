@@ -17,12 +17,12 @@ export const ActiveFaultQueue: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
 
-  const { isGuidedMode, activeScript, currentStepIndex } = useSimulationStore();
-  const currentStep = isGuidedMode && activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
+  const { activeScript, currentStepIndex } = useSimulationStore();
+  const currentStep = activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
 
-  // Construct Synthetic Guided Mode Incident when in Guided Mode
+  // Construct Synthetic Guided Mode Incident when in Guided Mode or Auto Play
   const guidedIncidents: IncidentData[] = [];
-  if (isGuidedMode && currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
+  if (currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
     const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-003';
     const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-004';
 
