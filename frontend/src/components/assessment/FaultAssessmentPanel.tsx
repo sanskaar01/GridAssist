@@ -25,7 +25,12 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
 
   // Construct Fallback Guided Incident for Right Panel during Guided Mode or Auto Play
   let activeIncident = selectedIncident;
-  if (!activeIncident && currentStepIndex > 0) {
+  const hasActiveOutageStep =
+    currentStep?.expectedState?.darkPoleCodes?.length ||
+    currentStep?.expectedState?.incidentCreated ||
+    (activeScript.id === 'power-restoration' && currentStepIndex <= 1);
+
+  if (!activeIncident && hasActiveOutageStep) {
     const isDTFault = activeScript.category === 'DT_FAULT';
     const isSensorAnomaly = activeScript.category === 'SENSOR_ANOMALY';
     const isRestoration = activeScript.category === 'RESTORATION';

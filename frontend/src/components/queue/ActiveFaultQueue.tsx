@@ -22,10 +22,15 @@ export const ActiveFaultQueue: React.FC<Props> = ({
 
   // Construct Synthetic Guided Mode Incident when in Guided Mode or Auto Play
   const guidedIncidents: IncidentData[] = [];
-  if (currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
+  const hasActiveOutageStep =
+    currentStep?.expectedState?.darkPoleCodes?.length ||
+    currentStep?.expectedState?.incidentCreated ||
+    (activeScript.id === 'power-restoration' && currentStepIndex <= 1);
+
+  if (hasActiveOutageStep) {
     const isDTFault = activeScript.category === 'DT_FAULT';
-    const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-003';
-    const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-004';
+    const parentCode = currentStep?.expectedState?.isolatedSpan?.parentCode || currentStep?.narration?.isolatedSpan?.parentCode || 'P-003';
+    const childCode = currentStep?.expectedState?.isolatedSpan?.childCode || currentStep?.narration?.isolatedSpan?.childCode || 'P-004';
 
     guidedIncidents.push({
       id: isDTFault ? 'INC-DT-D0102' : 'INC-GUIDED-01',
@@ -42,8 +47,8 @@ export const ActiveFaultQueue: React.FC<Props> = ({
               `Substation SUB-01 (11.0 kV Feeder F-07) and Parallel DT D-0101 (230 V) live`,
             ]
           : [
-              `IoT Sensor ${currentStep.deviceCode} emitted POWER_LOST (Seq #${currentStep.sequenceNumber})`,
-              `Downstream poles ${currentStep.expectedState.darkPoleCodes.join(', ')} dark`,
+              `IoT Sensor ${currentStep?.deviceCode || ''} emitted POWER_LOST (Seq #${currentStep?.sequenceNumber || ''})`,
+              `Downstream poles ${currentStep?.expectedState?.darkPoleCodes?.join(', ') || ''} dark`,
               `Parent Pole ${parentCode} live; Fault frontier isolated on Span ${parentCode} -> ${childCode}`,
             ],
       },
@@ -72,7 +77,7 @@ export const ActiveFaultQueue: React.FC<Props> = ({
       recommendedAction: isDTFault
         ? `Dispatch Specialized HT Crew CREW-BLR-02 to Distribution Transformer D-0102 in Ward W-085 (PIN 560078).`
         : `Dispatch Lineman Crew CREW-BLR-01 to Span ${parentCode} -> ${childCode} in Ward W-084 (PIN 560078).`,
-      affectedPoles: currentStep.expectedState.darkPoleCodes.length,
+      affectedPoles: currentStep?.expectedState?.darkPoleCodes?.length || 0,
       latitude: isDTFault ? 12.9725 : 12.9716,
       longitude: isDTFault ? 77.6425 : 77.6412,
       pincode: '560078',
@@ -91,11 +96,11 @@ export const ActiveFaultQueue: React.FC<Props> = ({
         latitude: 12.9716,
         longitude: 77.6412,
         pincode: '560078',
-        affectedPolesCount: currentStep.expectedState.darkPoleCodes.length,
-        affectedPoleIds: currentStep.expectedState.darkPoleCodes,
+        affectedPolesCount: currentStep?.expectedState?.darkPoleCodes?.length || 0,
+        affectedPoleIds: currentStep?.expectedState?.darkPoleCodes || [],
         evidence: [
-          `IoT Sensor ${currentStep.deviceCode} emitted POWER_LOST`,
-          `Downstream poles ${currentStep.expectedState.darkPoleCodes.join(', ')} dark`,
+          `IoT Sensor ${currentStep?.deviceCode || ''} emitted POWER_LOST`,
+          `Downstream poles ${currentStep?.expectedState?.darkPoleCodes?.join(', ') || ''} dark`,
           `Parent Pole ${parentCode} live; Fault frontier isolated`,
         ],
         assumptions: [`Overhead conductor break on Span ${parentCode} -> ${childCode}`],
