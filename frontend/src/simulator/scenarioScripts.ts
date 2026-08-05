@@ -43,6 +43,23 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
   steps: [
     {
       stepIndex: 0,
+      label: 'Healthy Grid Baseline State',
+      deviceCode: 'DEV-SUBSTATION-01',
+      eventType: 'HEARTBEAT',
+      sequenceNumber: 100,
+      narration: {
+        title: 'HEALTHY GRID BASELINE — ALL MONITORED FEEDERS OPERATING NORMALLY',
+        detail: '33kV Substation SUB-01 and Distribution Transformer D-0101 energizing 47 poles. All current particles flowing.',
+        algorithmicReason: 'Telemetry Engine confirms 100% energized status across all monitored distribution nodes.',
+      },
+      expectedState: {
+        darkPoleCodes: [],
+        incidentCreated: false,
+        ticketCreated: false,
+      },
+    },
+    {
+      stepIndex: 1,
       label: 'Telemetry Received (P-004 POWER_LOST)',
       deviceCode: 'DEV-W084-D0101-P004',
       eventType: 'POWER_LOST',
@@ -60,7 +77,7 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
       },
     },
     {
-      stepIndex: 1,
+      stepIndex: 2,
       label: 'Subtree Outage Cascade (P-005 & P-006 DARK)',
       deviceCode: 'DEV-W084-D0101-P005',
       eventType: 'POWER_LOST',
@@ -78,7 +95,7 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
       },
     },
     {
-      stepIndex: 2,
+      stepIndex: 3,
       label: 'Fault Frontier Isolation & Decision Card',
       deviceCode: 'DEV-W084-D0101-P006',
       eventType: 'POWER_LOST',
@@ -99,7 +116,7 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
       },
     },
     {
-      stepIndex: 3,
+      stepIndex: 4,
       label: 'Repair Ticket Generated & Crew Dispatched',
       deviceCode: 'DEV-W084-D0101-P004',
       eventType: 'POWER_LOST',
@@ -117,6 +134,23 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
         isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' },
         incidentCreated: true,
         ticketCreated: true,
+      },
+    },
+    {
+      stepIndex: 5,
+      label: 'Lineman Repair Complete & Telemetry Restoration',
+      deviceCode: 'DEV-W084-D0101-P004',
+      eventType: 'POWER_RESTORED',
+      sequenceNumber: 105,
+      narration: {
+        title: 'AUTOMATED TELEMETRY RESTORATION — TICKET VERIFIED & CLOSED',
+        detail: 'Lineman CREW-BLR-01 completed conductor splice on Span P-003 -> P-004. IoT sensors emitted POWER_RESTORED.',
+        algorithmicReason: 'Ticket Manager automatically verifies power telemetry restoration and closes ticket.',
+      },
+      expectedState: {
+        darkPoleCodes: [],
+        incidentCreated: false,
+        ticketCreated: false,
       },
     },
   ],
@@ -232,7 +266,7 @@ export const SCRIPT_POWER_RESTORATION: SimulationScript = {
       eventType: 'POWER_RESTORED',
       sequenceNumber: 502,
       narration: {
-        title: 'AUTOMATIC TELEMETRY VERIFICATION & TICKET CLOSURE',
+        title: 'AUTOMATED TELEMETRY VERIFICATION & TICKET CLOSURE',
         detail: 'Fault frontier no longer observed. Incident RESOLVED; Ticket automatically verified and CLOSED.',
         algorithmicReason: 'TicketManager converts status VERIFYING -> VERIFIED -> CLOSED based strictly on telemetry restoration.',
         incidentCreated: false,
