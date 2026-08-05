@@ -18,6 +18,19 @@
 
 ---
 
+## 🎯 Submission Quality Gates (G1–G6 Compliance)
+
+| Gate | Requirement | Status / Verification Command |
+| :--- | :--- | :--- |
+| **G1** | **Public GitHub Repository** | `https://github.com/sanskaar01/GridAssist` (Publicly accessible) |
+| **G2** | **One-Command Docker Compose** | `git clone https://github.com/sanskaar01/GridAssist && cd GridAssist && docker compose up` |
+| **G3** | **Pre-Seeded Synthetic Network** | Auto-seeded on startup with 47-node connected topology (Substation, Feeders, DTs, Poles) |
+| **G4** | **Public Production URL** | 🌐 **[https://grid-assist.vercel.app](https://grid-assist.vercel.app)** (No login / No VPN / Free Tier) |
+| **G5** | **Runnable Fault Simulator** | Accessible directly in UI via **SCENARIO Selector** or `POST /api/v1/simulator/step-run` |
+| **G6** | **Guided Operations Theater Demo** | Interactive Guided Theater mode with full physical causality step controls |
+
+---
+
 ## ⚡ Overview
 
 When high-voltage overhead distribution lines break or transformers blow out, electricity utility operators face cascading telemetry outages. GridAssist solves this by providing **deterministic graph fault localization**:
