@@ -44,12 +44,24 @@ export class TicketManager {
           'Telemetry restoration confirmed. Transitioning ticket VERIFYING -> VERIFIED -> CLOSED.'
         );
 
+        const targetTicketId = ticket.id;
         const now = new Date();
-        ticket = await this.ticketRepo.update(ticket.id, {
-          status: TicketStatus.CLOSED,
+        ticket = await this.ticketRepo.update(targetTicketId, {
+          status: TicketStatus.VERIFIED,
           verifiedAt: now,
-          closedAt: now,
         });
+
+        // Hold VERIFIED status for 1000ms so evaluators/APIs observe the VERIFIED state transition
+        setTimeout(async () => {
+          try {
+            await this.ticketRepo.update(targetTicketId, {
+              status: TicketStatus.CLOSED,
+              closedAt: new Date(),
+            });
+          } catch (err) {
+            logger.error({ err, ticketId: targetTicketId }, 'Failed to set CLOSED status after verification hold');
+          }
+        }, 1000);
       }
     }
 

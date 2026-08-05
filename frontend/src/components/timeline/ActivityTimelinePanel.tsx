@@ -7,22 +7,62 @@ interface Props {
   matchingTicket: TicketData | undefined;
 }
 
+import { useSimulationStore } from '../../store/useSimulationStore';
+
 export const ActivityTimelinePanel: React.FC<Props> = ({ selectedIncident, matchingTicket }) => {
-  if (!selectedIncident) {
-    return (
-      <footer className="h-16 bg-[#0D1117] border-t border-[#30363D] px-4 py-2 text-xs flex items-center justify-center text-gray-500 font-mono">
-        <Clock className="w-4 h-4 mr-2" /> Select an active outage to view chronological event timeline.
-      </footer>
-    );
+  const { activeScript, currentStepIndex, isCompleted } = useSimulationStore();
+
+  // Guided Mode / Scenario 4 Chronological Timeline Proof Builder
+  const guidedTimeline: Array<{ timestamp: string; event: string; details: string }> = [];
+
+  if (activeScript.id === 'power-restoration') {
+    guidedTimeline.push({
+      timestamp: '13:20:41',
+      event: 'Telemetry Ingested',
+      details: 'DEV-W084-D0101-P004 emitted POWER_LOST (0 V)',
+    });
+    if (currentStepIndex >= 0) {
+      guidedTimeline.push({
+        timestamp: '13:20:43',
+        event: 'Fault Localized',
+        details: 'Isolated Fault Frontier: Span P-003 -> P-004',
+      });
+      guidedTimeline.push({
+        timestamp: '13:20:45',
+        event: 'Crew Dispatched',
+        details: 'Ticket TCK-SPAN-P004 ASSIGNED to CREW-BLR-01',
+      });
+    }
+    if (currentStepIndex >= 1) {
+      guidedTimeline.push({
+        timestamp: '13:20:48',
+        event: 'Repair Claimed',
+        details: 'Verification REJECTED — Sensors still report 0 V',
+      });
+    }
+    if (currentStepIndex >= 2) {
+      guidedTimeline.push({
+        timestamp: '13:20:50',
+        event: 'Telemetry Verified',
+        details: 'POWER_RESTORED packet ingested (230 V restored)',
+      });
+    }
+    if (currentStepIndex >= 3 || isCompleted) {
+      guidedTimeline.push({
+        timestamp: '13:20:51',
+        event: 'Ticket Closed',
+        details: 'Status VERIFYING -> VERIFIED -> CLOSED',
+      });
+    }
   }
 
   // Extract timeline events from incident evidence object
-  const rawTimeline = selectedIncident.evidence?.timeline || [];
+  const rawTimeline = selectedIncident?.evidence?.timeline || guidedTimeline;
 
   // Complement with ticket status milestones
   const mergedTimeline = [...rawTimeline];
 
-  if (matchingTicket?.assignedCrew) {
+  if (matchingTicket?.assignedCrew && selectedIncident) {
     mergedTimeline.push({
       timestamp: selectedIncident.detectedAt,
       event: 'Crew Assigned',
@@ -54,7 +94,7 @@ export const ActivityTimelinePanel: React.FC<Props> = ({ selectedIncident, match
       <div className="flex items-center justify-between text-[11px] font-bold text-gray-400 border-b border-[#21262D] pb-1">
         <span className="flex items-center gap-1.5 text-gray-200">
           <Clock className="w-3.5 h-3.5 text-blue-400" />
-          ACTIVITY TIMELINE — INCIDENT #{selectedIncident.id.substring(0, 8)}
+          ACTIVITY TIMELINE — {selectedIncident ? `INCIDENT #${selectedIncident.id.substring(0, 8)}` : 'NO ACTIVE INCIDENT'}
         </span>
         <span className="text-gray-400">CHRONOLOGICAL EVENT LOG</span>
       </div>

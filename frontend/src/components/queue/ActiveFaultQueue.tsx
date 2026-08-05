@@ -17,15 +17,16 @@ export const ActiveFaultQueue: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
 
-  const { activeScript, currentStepIndex } = useSimulationStore();
+  const { activeScript, currentStepIndex, isCompleted } = useSimulationStore();
   const currentStep = activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
 
   // Construct Synthetic Guided Mode Incident when in Guided Mode or Auto Play
   const guidedIncidents: IncidentData[] = [];
   const hasActiveOutageStep =
-    currentStep?.expectedState?.darkPoleCodes?.length ||
-    currentStep?.expectedState?.incidentCreated ||
-    (activeScript.id === 'power-restoration' && currentStepIndex <= 1);
+    !isCompleted &&
+    (currentStep?.expectedState?.darkPoleCodes?.length ||
+      currentStep?.expectedState?.incidentCreated ||
+      (activeScript.id === 'power-restoration' && currentStepIndex <= 1));
 
   if (hasActiveOutageStep) {
     const isDTFault = activeScript.category === 'DT_FAULT';
@@ -222,7 +223,7 @@ export const ActiveFaultQueue: React.FC<Props> = ({
                     : 'hover:bg-[#1C2128] text-gray-300'
                 }`}
               >
-                {/* Top Row: Type & Transformer Code */}
+                {/* Top Row: Type & Dynamic Ticket Lifecycle Badge */}
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5 font-bold text-xs">
                     <span className={`w-2 h-2 rounded-full ${inc.faultType === 'DT' ? 'bg-amber-500' : 'bg-rose-500 scada-pulse-node'}`} />
@@ -230,9 +231,21 @@ export const ActiveFaultQueue: React.FC<Props> = ({
                     <span className="text-gray-400">({transformerCode})</span>
                   </div>
 
-                  <span className={`px-1.5 py-0.2 text-[10px] rounded border font-bold ${confidenceColor}`}>
-                    {inc.confidence}
-                  </span>
+                  {activeScript.id === 'power-restoration' ? (
+                    <span className={`px-1.5 py-0.2 text-[10px] rounded border font-bold ${
+                      currentStepIndex === 0
+                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                        : currentStepIndex === 1
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse'
+                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    }`}>
+                      {currentStepIndex === 0 ? 'CREW ASSIGNED' : currentStepIndex === 1 ? 'VERIFYING...' : 'VERIFIED'}
+                    </span>
+                  ) : (
+                    <span className={`px-1.5 py-0.2 text-[10px] rounded border font-bold ${confidenceColor}`}>
+                      {inc.confidence}
+                    </span>
+                  )}
                 </div>
 
                 {/* Span details */}
