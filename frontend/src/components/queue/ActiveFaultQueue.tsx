@@ -23,8 +23,8 @@ export const ActiveFaultQueue: React.FC<Props> = ({
   // Construct Synthetic Guided Mode Incident when in Guided Mode
   const guidedIncidents: IncidentData[] = [];
   if (isGuidedMode && currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
-    const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-002';
-    const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-003';
+    const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-003';
+    const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-004';
 
     guidedIncidents.push({
       id: 'INC-GUIDED-01',

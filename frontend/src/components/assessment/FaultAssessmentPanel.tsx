@@ -26,8 +26,8 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
   // Construct Fallback Guided Incident for Right Panel during Guided Mode
   let activeIncident = selectedIncident;
   if (!activeIncident && isGuidedMode && currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
-    const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-002';
-    const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-003';
+    const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-003';
+    const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-004';
 
     activeIncident = {
       id: 'INC-GUIDED-01',
