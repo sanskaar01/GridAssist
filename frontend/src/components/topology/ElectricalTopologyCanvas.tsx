@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { TransformerData, IncidentData, PoleData } from '../../types';
 import { SCADAHelpToggle } from './SCADAHelpToggle';
+import { useSimulationStore } from '../../store/useSimulationStore';
 
 interface Props {
   transformers: TransformerData[];
@@ -144,6 +145,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     targetZoom: 1.0,
   });
 
+  const { isGuidedMode, activeScript, currentStepIndex } = useSimulationStore();
+
   const activeTransformers =
     transformers && transformers.length > 0 ? transformers : FALLBACK_TRANSFORMERS;
 
@@ -151,6 +154,11 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
   const computeGraphLayout = useCallback((): { nodes: RenderNode[]; edges: RenderEdge[] } => {
     const nodes: RenderNode[] = [];
     const edges: RenderEdge[] = [];
+
+    // Get current active script step for Guided Demo Mode state synchronization
+    const currentStep = isGuidedMode && activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
+    const scriptDarkPoleCodes = currentStep?.expectedState?.darkPoleCodes || [];
+    const scriptIsolatedSpan = currentStep?.narration?.isolatedSpan || currentStep?.expectedState?.isolatedSpan;
 
     // Substation Node (SUB-01) at x:540, y:40
     const subX = 540;
@@ -232,8 +240,10 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         const rootX = dtX + xOffset;
         const rootY = dtY + 90;
 
+        const rootCode = rootPole.id.startsWith('P-') ? rootPole.id : `P-${rootPole.id.substring(0, 6)}`;
+        const isRootScriptDark = scriptDarkPoleCodes.includes(rootCode);
         const rootState = rootPole.poleState?.currentState || rootPole.currentState;
-        const isRootEnergized = rootState !== 'DARK';
+        const isRootEnergized = !isRootScriptDark && rootState !== 'DARK';
 
         edges.push({
           fromId: transformer.id,
@@ -257,13 +267,15 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           nodes,
           edges,
           selectedIncident,
-          levelHeight
+          levelHeight,
+          scriptDarkPoleCodes,
+          scriptIsolatedSpan
         );
       });
     });
 
     return { nodes, edges };
-  }, [activeTransformers, selectedIncident]);
+  }, [activeTransformers, selectedIncident, isGuidedMode, activeScript, currentStepIndex]);
 
   const positionPoleSubtree = (
     pole: PoleData,
@@ -276,10 +288,15 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     nodes: RenderNode[],
     edges: RenderEdge[],
     selectedInc: IncidentData | null,
-    lvlHeight: number
+    lvlHeight: number,
+    scriptDarkPoleCodes: string[],
+    scriptIsolatedSpan?: { parentCode: string; childCode: string }
   ) => {
-    const currentState = pole.poleState?.currentState || pole.currentState;
-    const isDark = currentState === 'DARK';
+    const poleCode = pole.id.startsWith('P-') ? pole.id : `P-${pole.id.substring(0, 6)}`;
+    const isScriptDark = scriptDarkPoleCodes.includes(poleCode);
+    const dbState = pole.poleState?.currentState || pole.currentState;
+    const isDark = isScriptDark || dbState === 'DARK';
+    const currentState = isDark ? 'DARK' : 'LIVE';
     const children = childrenMap.get(pole.id) || [];
 
     const isSensorAnomaly =
@@ -315,12 +332,16 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       const childX = x - spreadWidth / 2 + (idx + 0.5) * (spreadWidth / children.length) + skew;
       const childY = y + lvlHeight + (idx % 2 === 0 ? 0 : 10);
 
-      const childState = child.poleState?.currentState || child.currentState;
       const parentCode = pole.id.startsWith('P-') ? pole.id : `P-${pole.id.substring(0, 6)}`;
       const childCode = child.id.startsWith('P-') ? child.id : `P-${child.id.substring(0, 6)}`;
+      const isChildScriptDark = scriptDarkPoleCodes.includes(childCode);
+      const childState = child.poleState?.currentState || child.currentState;
+      const isChildDark = isChildScriptDark || childState === 'DARK';
 
       let isFaultSpan = false;
-      if (selectedInc && selectedInc.faultType === 'SPAN') {
+      if (scriptIsolatedSpan && scriptIsolatedSpan.parentCode === parentCode && scriptIsolatedSpan.childCode === childCode) {
+        isFaultSpan = true;
+      } else if (selectedInc && selectedInc.faultType === 'SPAN') {
         if (
           (selectedInc.decisionCard?.suspectedParentPoleCode === parentCode || selectedInc.suspectedParentPoleId === pole.id) &&
           (selectedInc.decisionCard?.suspectedChildPoleCode === childCode || selectedInc.suspectedChildPoleId === child.id)
@@ -329,7 +350,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         }
       }
 
-      const isEnergized = isSensorAnomaly ? true : !isDark && childState !== 'DARK';
+      const isEnergized = isSensorAnomaly ? true : !isDark && !isChildDark;
 
       edges.push({
         fromId: pole.id,
@@ -353,37 +374,35 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         nodes,
         edges,
         selectedInc,
-        lvlHeight
+        lvlHeight,
+        scriptDarkPoleCodes,
+        scriptIsolatedSpan
       );
     });
   };
 
-  // Camera Auto-Pan Trigger on Incident Selection (SSOT: CAMERA_ANIMATION_SPEC.md)
+  // Camera Auto-Pan Trigger on Guided Step or Incident Selection (SSOT: CAMERA_ANIMATION_SPEC.md)
   useEffect(() => {
-    if (!selectedIncident) {
-      // Smooth return to default overview bounds (650ms Quartic Out)
-      cameraAnimRef.current = {
-        active: true,
-        startTime: performance.now(),
-        duration: 650,
-        startPan: { ...panOffset },
-        targetPan: { x: 50, y: 30 },
-        startZoom: zoomLevel,
-        targetZoom: 1.0,
-      };
-      return;
-    }
-
     const { nodes, edges } = computeGraphLayout();
     let targetNode: RenderNode | undefined;
 
-    if (selectedIncident.faultType === 'SPAN') {
-      const faultEdge = edges.find((e) => e.isFaultSpan);
-      if (faultEdge) {
-        targetNode = nodes.find((n) => n.id === faultEdge.toId);
+    if (isGuidedMode && activeScript?.steps) {
+      const currentStep = activeScript.steps[currentStepIndex];
+      const focusId = currentStep?.narration?.focusAssetId || currentStep?.expectedState?.darkPoleCodes?.[0];
+      if (focusId) {
+        targetNode = nodes.find((n) => n.code === focusId || n.id === focusId || n.code.includes(focusId));
       }
-    } else {
-      targetNode = nodes.find((n) => n.transformerId === selectedIncident.transformerId);
+    }
+
+    if (!targetNode && selectedIncident) {
+      if (selectedIncident.faultType === 'SPAN') {
+        const faultEdge = edges.find((e) => e.isFaultSpan);
+        if (faultEdge) {
+          targetNode = nodes.find((n) => n.id === faultEdge.toId);
+        }
+      } else {
+        targetNode = nodes.find((n) => n.transformerId === selectedIncident.transformerId);
+      }
     }
 
     if (targetNode && containerRef.current) {
@@ -404,8 +423,19 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         startZoom: zoomLevel,
         targetZoom: targetZoom,
       };
+    } else if (!selectedIncident && (!isGuidedMode || currentStepIndex === 0)) {
+      // Smooth return to default overview bounds (650ms Quartic Out)
+      cameraAnimRef.current = {
+        active: true,
+        startTime: performance.now(),
+        duration: 650,
+        startPan: { ...panOffset },
+        targetPan: { x: 50, y: 30 },
+        startZoom: zoomLevel,
+        targetZoom: 1.0,
+      };
     }
-  }, [selectedIncident, computeGraphLayout]);
+  }, [selectedIncident, isGuidedMode, activeScript, currentStepIndex, computeGraphLayout]);
 
   // Main Canvas Render Loop
   useEffect(() => {
