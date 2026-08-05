@@ -93,7 +93,7 @@ export const ControlRoomPage: React.FC = () => {
     : undefined;
 
   return (
-    <div className="h-screen w-screen bg-[#0B0E14] flex flex-col overflow-hidden font-sans select-none">
+    <div className="h-screen h-[100dvh] w-screen w-full bg-[#0B0E14] flex flex-col overflow-hidden font-sans select-none">
       {/* Top Status Bar & Embedded Simulation Control Panel */}
       <ControlRoomHeader onRefreshData={loadData} />
 
@@ -104,7 +104,7 @@ export const ControlRoomPage: React.FC = () => {
       )}
 
       {/* Main 3-Column Desktop Grid Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* Left Panel: Active Fault Queue (~20% width) */}
         <ActiveFaultQueue
           incidents={data?.activeIncidents || []}

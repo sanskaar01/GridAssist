@@ -27,6 +27,11 @@ body {
 }
 
 /* Custom scrollbars for dense SCADA tables */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #30363d #161b22;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
