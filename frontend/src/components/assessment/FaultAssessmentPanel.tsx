@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { IncidentData, TicketData, CrewData } from '../../types';
 import { updateTicketStatus } from '../../services/dashboardService';
-import { AlertOctagon, CheckCircle2, ShieldCheck, MapPin, Wrench, UserCheck, Activity, Info } from 'lucide-react';
+import { AlertOctagon, CheckCircle2, ShieldCheck, MapPin, Wrench, UserCheck, Activity, Info, Award } from 'lucide-react';
 import { useSimulationStore } from '../../store/useSimulationStore';
 
 interface Props {
@@ -191,6 +191,43 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
           : 'Deterministic graph traversal algorithm identified exact conductor break.',
       },
     };
+  }
+
+  const { isCompleted } = useSimulationStore();
+
+  if (isCompleted || (currentStepIndex >= activeScript.steps.length - 1 && currentStep?.eventType === 'POWER_RESTORED')) {
+    return (
+      <aside className="w-[25%] min-w-[320px] bg-[#161B22] border-l border-[#30363D] flex flex-col h-full text-xs p-6 items-center justify-center text-center font-mono select-none">
+        <Award className="w-14 h-14 text-emerald-400 mb-3" />
+        <h3 className="text-emerald-400 font-bold text-sm uppercase tracking-wider">MISSION COMPLETE</h3>
+        <p className="text-gray-300 text-[11px] mt-1 font-bold">{activeScript.title}</p>
+
+        <div className="bg-[#0D1117] p-3 rounded-lg border border-emerald-500/30 w-full text-left space-y-2 mt-4 text-[10px]">
+          <div className="flex items-center justify-between text-gray-400 border-b border-[#30363D] pb-1.5">
+            <span>OPERATIONAL STATUS:</span>
+            <span className="text-emerald-400 font-bold flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              RESOLVED
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-gray-400 border-b border-[#30363D] pb-1.5">
+            <span>TELEMETRY VERIFIED:</span>
+            <span className="text-emerald-400 font-bold">100% SUCCESS (230 V)</span>
+          </div>
+          <div className="flex items-center justify-between text-gray-400 border-b border-[#30363D] pb-1.5">
+            <span>TICKET LIFECYCLE:</span>
+            <span className="text-emerald-400 font-bold">CLOSED AUTOMATICALLY</span>
+          </div>
+          <div className="flex items-center justify-between text-gray-400">
+            <span>RESTORED POLES:</span>
+            <span className="text-emerald-400 font-bold">ALL NODES ENERGIZED</span>
+          </div>
+        </div>
+        <p className="text-gray-500 text-[10px] mt-4">
+          Click <strong className="text-gray-300">RESET GRID</strong> or select another scenario from the dropdown to continue.
+        </p>
+      </aside>
+    );
   }
 
   if (!activeIncident) {

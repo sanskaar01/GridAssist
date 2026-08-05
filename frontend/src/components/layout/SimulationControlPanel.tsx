@@ -27,6 +27,7 @@ export const SimulationControlPanel: React.FC<Props> = ({ onGridReset }) => {
 
   const handleReset = async () => {
     await resetGrid();
+    // Dashboard refresh + incident clear handled via gridResetToken in ControlRoomPage
     if (onGridReset) onGridReset();
   };
 

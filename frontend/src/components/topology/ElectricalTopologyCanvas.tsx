@@ -125,6 +125,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
 
   // Particle & Keyframe Time Reference
   const animTimeRef = useRef<number>(0);
+  const stepStartTimeRef = useRef<number>(performance.now());
+  const prevStepIndexRef = useRef<number>(0);
 
   // Camera Animation Matrix State
   const cameraAnimRef = useRef<{
@@ -145,7 +147,36 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     targetZoom: 1.0,
   });
 
-  const { isGuidedMode, isPlayingAuto, activeScript, currentStepIndex } = useSimulationStore();
+  const { isGuidedMode, isPlayingAuto, activeScript, currentStepIndex, gridResetToken } = useSimulationStore();
+
+  // Track step transition timestamp for wave restoration and particle acceleration
+  useEffect(() => {
+    stepStartTimeRef.current = performance.now();
+    prevStepIndexRef.current = currentStepIndex;
+  }, [currentStepIndex, activeScript.id]);
+
+  // Restore default camera, pan, and animation refs when Reset Grid fires
+  useEffect(() => {
+    if (gridResetToken === 0) return;
+
+    setZoomLevel(0.5);
+    setPanOffset({ x: 50, y: 30 });
+    setHoveredNode(null);
+    setIsDragging(false);
+
+    cameraAnimRef.current = {
+      active: false,
+      startTime: 0,
+      duration: 650,
+      startPan: { x: 50, y: 30 },
+      targetPan: { x: 50, y: 30 },
+      startZoom: 0.5,
+      targetZoom: 0.5,
+    };
+    stepStartTimeRef.current = performance.now();
+    prevStepIndexRef.current = 0;
+    animTimeRef.current = 0;
+  }, [gridResetToken]);
 
   const activeTransformers =
     transformers && transformers.length > 0 ? transformers : FALLBACK_TRANSFORMERS;
@@ -157,8 +188,20 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
 
     // Get current active script step for Guided Demo & Auto Play state synchronization
     const currentStep = activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
-    const scriptDarkPoleCodes = currentStep?.expectedState?.darkPoleCodes || [];
+    let scriptDarkPoleCodes = currentStep?.expectedState?.darkPoleCodes || [];
     const scriptIsolatedSpan = currentStep?.narration?.isolatedSpan || currentStep?.expectedState?.isolatedSpan;
+
+    // ENG-S4-04: Sequential Downstream Restoration Wave (P004 -> 150ms -> P005 -> 150ms -> P006)
+    if (activeScript.id === 'power-restoration' && currentStepIndex >= 2) {
+      const elapsedMs = performance.now() - stepStartTimeRef.current;
+      if (elapsedMs < 150) {
+        scriptDarkPoleCodes = ['P-005', 'P-006']; // P-004 restored first
+      } else if (elapsedMs < 300) {
+        scriptDarkPoleCodes = ['P-006']; // P-005 restored second
+      } else {
+        scriptDarkPoleCodes = []; // All restored
+      }
+    }
 
     // Substation Node (SUB-01) at x:540, y:40
     const subX = 540;
@@ -416,7 +459,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
 
       cameraAnimRef.current = {
         active: true,
-        startTime: performance.now(),
+        startTime: performance.now() + 200, // 200ms delay for side panel slideout stability
         duration: 650,
         startPan: { ...panOffset },
         targetPan: { x: targetDx, y: targetDy },
@@ -424,10 +467,10 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         targetZoom: targetZoom,
       };
     } else if (!selectedIncident && currentStepIndex === 0) {
-      // Smooth return to default overview bounds at 50% scale (650ms Quartic Out)
+      // Smooth return to default overview bounds at 50% scale (650ms Quartic Out with 200ms delay)
       cameraAnimRef.current = {
         active: true,
-        startTime: performance.now(),
+        startTime: performance.now() + 200,
         duration: 650,
         startPan: { ...panOffset },
         targetPan: { x: 50, y: 30 },
@@ -515,24 +558,47 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.lineWidth = 2;
           ctx.stroke();
         } else {
-          // NORMAL ELECTRICAL SPAN
-          ctx.strokeStyle = edge.isEnergized ? '#10B981' : '#484F58';
+          // NORMAL ELECTRICAL SPAN WITH ENG-S4-08 POLYLINE TRANSITION (Red -> Amber -> Green)
+          const elapsedSec = (performance.now() - stepStartTimeRef.current) / 1000;
+          let strokeColor = edge.isEnergized ? '#10B981' : '#484F58';
+          let shadowColor = edge.isEnergized ? 'rgba(16, 185, 129, 0.4)' : 'transparent';
+          let shadowBlur = edge.isEnergized ? 4 : 0;
+
+          // Transition color wave if span was restored in Scenario 4 within 600ms
+          if (activeScript.id === 'power-restoration' && currentStepIndex >= 2 && elapsedSec < 0.6) {
+            if (elapsedSec < 0.2) {
+              strokeColor = '#EF4444';
+              shadowColor = '#EF4444';
+              shadowBlur = 10;
+            } else if (elapsedSec < 0.4) {
+              strokeColor = '#F59E0B';
+              shadowColor = '#F59E0B';
+              shadowBlur = 8;
+            } else {
+              strokeColor = '#10B981';
+              shadowColor = '#10B981';
+              shadowBlur = 6;
+            }
+          }
+
+          ctx.strokeStyle = strokeColor;
           ctx.lineWidth = 2;
-          ctx.shadowColor = edge.isEnergized ? 'rgba(16, 185, 129, 0.4)' : 'transparent';
-          ctx.shadowBlur = edge.isEnergized ? 4 : 0;
+          ctx.shadowColor = shadowColor;
+          ctx.shadowBlur = shadowBlur;
           ctx.beginPath();
           ctx.moveTo(edge.fromX, edge.fromY);
           ctx.lineTo(edge.toX, edge.toY);
           ctx.stroke();
 
-          // ENERGIZED CURRENT FLOW PARTICLES (45 px/s, SSOT: PARTICLE_PHYSICS_SPEC.md)
+          // ENERGIZED CURRENT FLOW PARTICLES WITH ENG-S4-06 VELOCITY RAMP (0 -> 45 px/s over 450ms)
           if (edge.isEnergized) {
             const dx = edge.toX - edge.fromX;
             const dy = edge.toY - edge.fromY;
             const distance = Math.hypot(dx, dy);
 
             if (distance > 0) {
-              const velocity = 45; // 45 px/s
+              // Smooth velocity acceleration ramp (0 -> 10 -> 20 -> 30 -> 45 px/s over 450ms)
+              const velocity = Math.min(45, Math.max(2, elapsedSec * 100));
               const particleCount = 2;
 
               for (let i = 0; i < particleCount; i++) {
