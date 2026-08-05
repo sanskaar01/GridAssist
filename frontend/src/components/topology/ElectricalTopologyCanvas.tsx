@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { TransformerData, IncidentData, PoleData } from '../../types';
+import { SCADAHelpToggle } from './SCADAHelpToggle';
 
 interface Props {
   transformers: TransformerData[];
@@ -624,40 +625,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         </div>
       )}
 
-      {/* SCADA Industrial Graph Legend */}
-      <div className="absolute bottom-3 left-3 bg-[#161B22]/95 border border-[#30363D] p-2.5 rounded text-[11px] font-mono text-gray-300 backdrop-blur z-[1000] flex flex-col gap-1.5 shadow-xl">
-        <div className="font-bold text-white text-xs border-b border-[#30363D] pb-1 mb-0.5">
-          ELECTRICAL TOPOLOGY GRAPH SYMBOLS
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 bg-blue-500 rotate-45 border border-white font-bold text-[7px] flex items-center justify-center text-white">
-            SUB
-          </span>
-          <span>33kV Substation (SUB-01)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 bg-amber-500 rounded-sm border border-black font-bold text-[8px] flex items-center justify-center text-black">
-            DT
-          </span>
-          <span>Distribution Transformer</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_4px_#10B981]" />
-          <span>Live Pole Node (Energized)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 scada-pulse-node shadow-[0_0_6px_#EF4444]" />
-          <span>Dark Pole Node (Outage)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-5 h-1 bg-emerald-500 rounded" />
-          <span className="text-emerald-400">Power Flow Particles (Live Line)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-5 h-1 bg-rose-500 rounded scada-glow-polyline" />
-          <span className="text-rose-400 font-bold">Failed Electrical Span (Fault Frontier)</span>
-        </div>
-      </div>
+      {/* Floating SCADA Help Button & Contextual Legend */}
+      <SCADAHelpToggle />
     </div>
   );
 };
