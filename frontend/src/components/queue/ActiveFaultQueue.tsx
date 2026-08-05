@@ -23,39 +23,58 @@ export const ActiveFaultQueue: React.FC<Props> = ({
   // Construct Synthetic Guided Mode Incident when in Guided Mode or Auto Play
   const guidedIncidents: IncidentData[] = [];
   if (currentStepIndex > 0 && currentStep?.expectedState?.darkPoleCodes?.length) {
+    const isDTFault = activeScript.category === 'DT_FAULT';
     const parentCode = currentStep.expectedState?.isolatedSpan?.parentCode || currentStep.narration?.isolatedSpan?.parentCode || 'P-003';
     const childCode = currentStep.expectedState?.isolatedSpan?.childCode || currentStep.narration?.isolatedSpan?.childCode || 'P-004';
 
     guidedIncidents.push({
-      id: 'INC-GUIDED-01',
-      faultType: activeScript.category === 'DT_FAULT' ? 'DT' : activeScript.category === 'SENSOR_ANOMALY' ? 'SENSOR' : 'SPAN',
-      transformerId: 'dt-fallback-01',
-      suspectedParentPoleId: parentCode,
-      suspectedChildPoleId: childCode,
+      id: isDTFault ? 'INC-DT-D0102' : 'INC-GUIDED-01',
+      faultType: isDTFault ? 'DT' : activeScript.category === 'SENSOR_ANOMALY' ? 'SENSOR' : 'SPAN',
+      transformerId: isDTFault ? 'dt-0102-id' : 'dt-fallback-01',
+      suspectedParentPoleId: isDTFault ? 'D-0102' : parentCode,
+      suspectedChildPoleId: isDTFault ? 'P-026' : childCode,
       confidence: 'HIGH',
       evidence: {
-        items: [
-          `IoT Sensor ${currentStep.deviceCode} emitted POWER_LOST (Seq #${currentStep.sequenceNumber})`,
-          `Downstream poles ${currentStep.expectedState.darkPoleCodes.join(', ')} dark`,
-          `Parent Pole ${parentCode} live; Fault frontier isolated on Span ${parentCode} -> ${childCode}`,
-        ],
+        items: isDTFault
+          ? [
+              `IoT Sensor DEV-W085-D0102-P026 emitted POWER_LOST (Seq #301)`,
+              `20/20 downstream poles under D-0102 reported DARK state`,
+              `Substation SUB-01 (11.0 kV Feeder F-07) and Parallel DT D-0101 (230 V) live`,
+            ]
+          : [
+              `IoT Sensor ${currentStep.deviceCode} emitted POWER_LOST (Seq #${currentStep.sequenceNumber})`,
+              `Downstream poles ${currentStep.expectedState.darkPoleCodes.join(', ')} dark`,
+              `Parent Pole ${parentCode} live; Fault frontier isolated on Span ${parentCode} -> ${childCode}`,
+            ],
       },
       assumptions: {
-        items: [
-          `Overhead conductor break isolated on Span ${parentCode} -> ${childCode}`,
-          `Parallel feeder branches operating normally`,
-        ],
+        items: isDTFault
+          ? [
+              `Distribution Transformer Output Failure on D-0102 (Most Probable Cause: HT Fuse Blowout)`,
+              `11kV Feeder F-07 and Parallel DT D-0101 operating normally`,
+            ]
+          : [
+              `Overhead conductor break isolated on Span ${parentCode} -> ${childCode}`,
+              `Parallel feeder branches operating normally`,
+            ],
       },
       rejectedAlternatives: {
-        items: [
-          { hypothesis: 'Distribution Transformer Blowout', reason: 'Parallel feeder poles remain energized' },
-          { hypothesis: 'Sensor Malfunction', reason: 'Multi-pole downstream cascade confirmed' },
-        ],
+        items: isDTFault
+          ? [
+              { hypothesis: '11kV Feeder Blackout', reason: 'Substation SUB-01 and Parallel DT D-0101 remain energized' },
+              { hypothesis: 'Single Span Conductor Break', reason: 'Entire D-0102 subtree collapsed with zero internal Live->Dark transition' },
+            ]
+          : [
+              { hypothesis: 'Distribution Transformer Blowout', reason: 'Parallel feeder poles remain energized' },
+              { hypothesis: 'Sensor Malfunction', reason: 'Multi-pole downstream cascade confirmed' },
+            ],
       },
-      recommendedAction: `Dispatch Lineman Crew CREW-BLR-01 to Span ${parentCode} -> ${childCode} in Ward W-084 (PIN 560078).`,
+      recommendedAction: isDTFault
+        ? `Dispatch Specialized HT Crew CREW-BLR-02 to Distribution Transformer D-0102 in Ward W-085 (PIN 560078).`
+        : `Dispatch Lineman Crew CREW-BLR-01 to Span ${parentCode} -> ${childCode} in Ward W-084 (PIN 560078).`,
       affectedPoles: currentStep.expectedState.darkPoleCodes.length,
-      latitude: 12.9716,
-      longitude: 77.6412,
+      latitude: isDTFault ? 12.9725 : 12.9716,
+      longitude: isDTFault ? 77.6425 : 77.6412,
       pincode: '560078',
       status: 'ACTIVE',
       detectedAt: new Date().toISOString(),
