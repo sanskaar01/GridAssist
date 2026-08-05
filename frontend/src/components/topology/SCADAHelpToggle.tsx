@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
-import { HelpCircle, Pin, PinOff } from 'lucide-react';
+import { HelpCircle, Pin, Activity } from 'lucide-react';
 
-export const SCADAHelpToggle: React.FC = () => {
+interface Props {
+  renderedNodesCount?: number;
+  renderedEdgesCount?: number;
+  selectedOutage?: string;
+  zoomLevel?: number;
+  panOffset?: { x: number; y: number };
+}
+
+export const SCADAHelpToggle: React.FC<Props> = ({
+  renderedNodesCount = 48,
+  renderedEdgesCount = 47,
+  selectedOutage = 'None',
+  zoomLevel = 1.0,
+  panOffset = { x: 50, y: 30 },
+}) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isPinned, setIsPinned] = useState<boolean>(false);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
 
   const handleMouseEnter = () => {
     setIsOpen(true);
@@ -22,39 +37,66 @@ export const SCADAHelpToggle: React.FC = () => {
   };
 
   return (
-    <div
-      className="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2 font-mono text-xs select-none"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {/* Floating (?) SCADA Glass Button */}
-      <button
-        type="button"
-        onClick={togglePin}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg border backdrop-blur transition-all duration-200 shadow-xl ${
-          isPinned
-            ? 'bg-blue-600/90 border-blue-400 text-white shadow-blue-500/30'
-            : isOpen
-            ? 'bg-[#161B22]/95 border-blue-500 text-blue-400 shadow-blue-500/20'
-            : 'bg-[#161B22]/80 border-[#30363D] text-gray-400 hover:text-white hover:border-blue-400 hover:bg-[#161B22]/95'
-        }`}
-        title={isPinned ? 'Legend Pinned (Click to Unpin)' : 'Hover for Legend (Click to Pin)'}
-      >
-        <HelpCircle className="w-4 h-4 text-blue-400 animate-pulse" />
-        <span className="font-bold tracking-wider">GRAPH SYMBOLS</span>
-        {isPinned ? (
-          <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-        ) : (
-          <PinOff className="w-3.5 h-3.5 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-        )}
-      </button>
+    <div className="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2 font-mono text-xs select-none">
+      {/* Floating Buttons Bar */}
+      <div className="flex items-center gap-2">
+        {/* Floating Diagnostics Button */}
+        <button
+          type="button"
+          onClick={() => setShowDiagnostics((prev) => !prev)}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border backdrop-blur transition-all duration-200 shadow-xl ${
+            showDiagnostics
+              ? 'bg-emerald-600/90 border-emerald-400 text-white shadow-emerald-500/30'
+              : 'bg-[#161B22]/80 border-[#30363D] text-gray-400 hover:text-white hover:border-emerald-400 hover:bg-[#161B22]/95'
+          }`}
+          title="Toggle Graph Diagnostics"
+        >
+          <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+          <span className="font-bold tracking-wider text-[11px]">DIAGNOSTICS</span>
+        </button>
+
+        {/* Floating (?) SCADA Glass Button */}
+        <button
+          type="button"
+          onMouseEnter={handleMouseEnter}
+          onClick={togglePin}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur transition-all duration-200 shadow-xl ${
+            isPinned
+              ? 'bg-blue-600/90 border-blue-400 text-white shadow-blue-500/30'
+              : isOpen
+              ? 'bg-[#161B22]/95 border-blue-500 text-blue-400 shadow-blue-500/20'
+              : 'bg-[#161B22]/80 border-[#30363D] text-gray-400 hover:text-white hover:border-blue-400 hover:bg-[#161B22]/95'
+          }`}
+          title={isPinned ? 'Legend Pinned (Click to Unpin)' : 'Hover for Legend (Click to Pin)'}
+        >
+          <HelpCircle className="w-4 h-4 text-blue-400" />
+          <span className="font-bold tracking-wider text-[11px]">GRAPH SYMBOLS</span>
+          {isPinned && <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />}
+        </button>
+      </div>
+
+      {/* Floating Diagnostics Card */}
+      {showDiagnostics && (
+        <div className="w-64 bg-[#161B22]/95 border border-[#30363D] p-3 rounded-xl text-[10px] text-gray-300 backdrop-blur shadow-2xl space-y-1">
+          <div className="font-bold text-emerald-400 border-b border-[#30363D] pb-1 mb-1">
+            GRIDASSIST GRAPH DIAGNOSTICS
+          </div>
+          <div>Substation: <span className="text-blue-400 font-bold">SUB-01 (33kV)</span></div>
+          <div>Transformers: <span className="text-amber-400 font-bold">2 (D-0101, D-0102)</span></div>
+          <div>Rendered Nodes: <span className="text-white font-bold">{renderedNodesCount}</span></div>
+          <div>Rendered Edges: <span className="text-white font-bold">{renderedEdgesCount}</span></div>
+          <div>Particle Current Velocity: <span className="text-emerald-400 font-bold">45 px/s</span></div>
+          <div>Zoom / Pan: <span className="text-gray-400">{zoomLevel.toFixed(2)}x ({Math.round(panOffset.x)}, {Math.round(panOffset.y)})</span></div>
+          <div>Selected Outage: <span className="text-rose-400 font-bold">{selectedOutage}</span></div>
+        </div>
+      )}
 
       {/* Contextual Legend Drawer Card */}
       {isOpen && (
         <div
-          className={`w-72 bg-[#161B22]/95 border border-[#30363D] p-3.5 rounded-xl text-[11px] text-gray-300 backdrop-blur shadow-2xl space-y-2.5 transform transition-all duration-200 ease-out origin-top-right ${
-            isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
-          }`}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className="w-72 bg-[#161B22]/95 border border-[#30363D] p-3.5 rounded-xl text-[11px] text-gray-300 backdrop-blur shadow-2xl space-y-2.5 transform transition-all duration-200 ease-out origin-top-right"
         >
           <div className="flex items-center justify-between border-b border-[#30363D] pb-2">
             <span className="font-bold text-white text-xs tracking-wider flex items-center gap-1.5">
