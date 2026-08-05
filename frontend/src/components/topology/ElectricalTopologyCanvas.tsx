@@ -587,7 +587,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.fillText(node.code, node.x, node.y - 22);
         } else if (node.type === 'TRANSFORMER') {
           const size = 24;
-          const isDtFault = selectedIncident?.faultType === 'DT' && selectedIncident.transformerId === node.transformerId;
+          const isDtScriptDark = activeScript.category === 'DT_FAULT' && currentStepIndex > 0 && node.code === 'D-0102';
+          const isDtFault = isDtScriptDark || (selectedIncident?.faultType === 'DT' && selectedIncident.transformerId === node.transformerId);
 
           ctx.fillStyle = isDtFault ? '#EF4444' : '#F59E0B';
           ctx.shadowColor = isDtFault ? '#EF4444' : '#F59E0B';
@@ -602,6 +603,27 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.font = 'bold 11px monospace';
           ctx.textAlign = 'center';
           ctx.fillText(`DT ${node.code}`, node.x, node.y - 16);
+
+          // Voltage Loss Badge Overlay for D-0102 Output Failure
+          if (isDtFault) {
+            const badgeX = node.x + 22;
+            const badgeY = node.y - 10;
+            const badgeW = 120;
+            const badgeH = 20;
+
+            ctx.fillStyle = 'rgba(13, 17, 23, 0.92)';
+            ctx.strokeStyle = '#EF4444';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#EF4444';
+            ctx.font = 'bold 9px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText('⚡ 230V → 0V (DEAD)', badgeX + 6, badgeY + 13);
+          }
         } else {
           // Pole Node with 1.8s Dark Radial Pulse (SSOT: ELECTRICAL_EFFECTS_SPEC.md)
           const isDark = node.isDark;
