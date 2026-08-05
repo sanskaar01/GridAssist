@@ -37,7 +37,7 @@ export const SCADAHelpToggle: React.FC<Props> = ({
   };
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2 font-mono text-xs select-none">
+    <div className="absolute bottom-4 left-4 z-[1000] flex flex-col-reverse items-start gap-2 font-mono text-xs select-none">
       {/* Floating Buttons Bar */}
       <div className="flex items-center gap-2">
         {/* Floating Diagnostics Button */}
@@ -77,17 +77,29 @@ export const SCADAHelpToggle: React.FC<Props> = ({
 
       {/* Floating Diagnostics Card */}
       {showDiagnostics && (
-        <div className="w-64 bg-[#161B22]/95 border border-[#30363D] p-3 rounded-xl text-[10px] text-gray-300 backdrop-blur shadow-2xl space-y-1">
-          <div className="font-bold text-emerald-400 border-b border-[#30363D] pb-1 mb-1">
-            GRIDASSIST GRAPH DIAGNOSTICS
+        <div className="w-68 bg-[#161B22]/95 border border-[#30363D] p-3.5 rounded-xl text-[10px] text-gray-300 backdrop-blur shadow-2xl space-y-1.5 font-mono">
+          <div className="font-bold text-emerald-400 border-b border-[#30363D] pb-1.5 mb-1 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              SCADA GRAPH DIAGNOSTICS
+            </span>
+            <span className="text-[9px] text-gray-500 font-normal">DETERMINISTIC</span>
           </div>
-          <div>Substation: <span className="text-blue-400 font-bold">SUB-01 (33kV)</span></div>
-          <div>Transformers: <span className="text-amber-400 font-bold">2 (D-0101, D-0102)</span></div>
-          <div>Rendered Nodes: <span className="text-white font-bold">{renderedNodesCount}</span></div>
-          <div>Rendered Edges: <span className="text-white font-bold">{renderedEdgesCount}</span></div>
-          <div>Particle Current Velocity: <span className="text-emerald-400 font-bold">45 px/s</span></div>
-          <div>Zoom / Pan: <span className="text-gray-400">{zoomLevel.toFixed(2)}x ({Math.round(panOffset.x)}, {Math.round(panOffset.y)})</span></div>
-          <div>Selected Outage: <span className="text-rose-400 font-bold">{selectedOutage}</span></div>
+
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+            <div>Substation: <span className="text-blue-400 font-bold block">SUB-01 (33kV)</span></div>
+            <div>Feeder Trunk: <span className="text-amber-400 font-bold block">F-07 (11.0 kV)</span></div>
+            <div>DT Transformers: <span className="text-white font-bold block">2 (D-0101, D-0102)</span></div>
+            <div>Monitored Poles: <span className="text-emerald-400 font-bold block">{renderedNodesCount} Nodes</span></div>
+            <div>Conductor Spans: <span className="text-white font-bold block">{renderedEdgesCount} Edges</span></div>
+            <div>Particle Velocity: <span className="text-emerald-400 font-bold block">45 px/s</span></div>
+          </div>
+
+          <div className="border-t border-[#30363D]/80 pt-1.5 mt-1 space-y-0.5 text-[9.5px]">
+            <div>Camera Matrix: <span className="text-gray-400 font-mono">{zoomLevel.toFixed(2)}x ({Math.round(panOffset.x)}, {Math.round(panOffset.y)})</span></div>
+            <div>Localization Engine: <span className="text-emerald-400 font-bold">Graph Parent/Child Frontier</span></div>
+            <div>Selected Outage: <span className="text-rose-400 font-bold">{selectedOutage}</span></div>
+          </div>
         </div>
       )}
 

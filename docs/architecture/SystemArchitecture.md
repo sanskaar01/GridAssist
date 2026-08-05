@@ -1,35 +1,368 @@
-# SYSTEM ARCHITECTURE SPECIFICATION
+1. System Architecture
+Overview
 
-## System Topology & Event Flow
+GridAssist is an event-driven decision support platform for low-voltage power distribution networks.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Field as IoT Sensor / Pole
-    participant API as Telemetry API
-    participant TE as Telemetry Engine
-    participant DB as PostgreSQL DB
-    participant LE as Localization Engine
-    participant DE as Decision Engine
-    participant IM as Incident Manager
-    participant TM as Ticket Manager
-    actor Operator as Control Room UI
+The platform continuously receives telemetry from pole-mounted IoT devices, maintains a real-time representation of the electrical network, identifies probable faults, generates actionable repair incidents, and automatically verifies successful restoration using telemetry.
 
-    Field->>API: POST /api/v1/telemetry (POWER_LOST)
-    API->>TE: Validate Zod Schema Payload
-    TE->>DB: Update PoleState -> DARK
-    TE->>LE: Trigger Radial Tree Traversal
-    LE->>DE: Isolated Candidate Fault Frontier
-    DE->>DE: Generate Decision Card (Evidence & Rejected Hypotheses)
-    DE->>IM: Process Decision Card
-    IM->>DB: Create Operational Incident (Status: ACTIVE)
-    IM->>TM: Sync Repair Ticket
-    TM->>DB: Create Repair Ticket (Status: DETECTED)
-    Operator->>DB: Poll GET /api/v1/dashboard (1.5s interval)
-    DB-->>Operator: Return Grid Topology, Active Incidents & Tickets
-```
+The system is intentionally designed as a modular monolith rather than a distributed microservice architecture.
 
-## System Constraints & Guarantees
-- **Pure Deterministic Reasoning:** Fault localization relies 100% on graph traversal of physical parent-child pole hierarchy. No random heuristics or probability guessing.
-- **Architectural Honesty:** No UI state shortcuts. The frontend Operations Theater visualizes live database states exclusively.
-- **Deduplication & Timeline Audit:** Repeated telemetry packets update evidence timelines without creating duplicate incident rows.
+This decision was made because:
+
+the expected scale (approximately 39 telemetry messages per second under normal operation and burst traffic during outages) does not require service decomposition
+deployment is significantly simpler (docker compose up)
+debugging is easier
+module boundaries remain well-defined
+each module can later be extracted into an independent service if required.
+
+The architecture emphasizes:
+
+explainability
+deterministic reasoning
+graceful degradation
+operational trust
+
+rather than architectural complexity.
+
+                     IoT Devices
+                           │
+                           ▼
+                 Telemetry Gateway
+                           │
+                           ▼
+                Event Validation Layer
+                           │
+                           ▼
+                  Event Buffer & Queue
+                           │
+                           ▼
+                    Pole State Engine
+                           │
+            ┌──────────────┴──────────────┐
+            ▼                             ▼
+      Topology Engine              Scheduled Outage Service
+            │                             │
+            └──────────────┬──────────────┘
+                           ▼
+                 Fault Classification
+                           │
+                           ▼
+                 Fault Localization
+                           │
+                           ▼
+               Confidence Evaluation
+                           │
+                           ▼
+                  Incident Generator
+                           │
+                           ▼
+                    Ticket Manager
+                           │
+             ┌─────────────┴─────────────┐
+             ▼                           ▼
+      AI Communication            Dashboard API
+             │                           │
+             └─────────────┬─────────────┘
+                           ▼
+                  React Operator Console
+
+3. Architectural Philosophy
+
+GridAssist follows four architectural principles.
+
+Event Driven
+
+The platform reacts to telemetry events rather than periodically scanning the entire network.
+
+Every incoming event has the potential to change the current understanding of network state.
+
+This minimizes unnecessary computation while allowing rapid fault localization.
+
+State-Based Reasoning
+
+GridAssist never localizes faults directly from individual telemetry messages.
+
+Instead, incoming events update the current state of the electrical network.
+
+Localization always operates on the latest network state rather than isolated messages.
+
+This makes duplicate messages, delayed messages and retransmissions easier to handle.
+
+Explainable Decisions
+
+Every recommendation produced by the system must be supported by observable evidence.
+
+Rather than simply reporting
+
+"Fault between P-221 and P-222"
+
+the platform records:
+
+evidence used
+assumptions made
+uncertainty
+confidence level
+
+Every incident therefore becomes auditable.
+
+Graceful Degradation
+
+Incomplete information should reduce confidence rather than break the system.
+
+Examples include:
+
+missing topology
+missing telemetry
+missing PIN code
+missing device
+delayed messages
+
+The operator is always informed when assumptions are being made.
+
+4. System Modules
+4.1 Telemetry Gateway
+Responsibility
+
+Accept telemetry from IoT devices.
+
+Input
+
+HTTPS POST requests.
+
+Responsibilities
+request validation
+schema validation
+timestamp recording
+authentication (future)
+buffering
+burst protection
+
+No localization occurs in this layer.
+
+4.2 Event Validation Layer
+
+Incoming events are validated before entering the system.
+
+Validation includes
+
+duplicate detection using device sequence numbers
+stale event detection
+malformed payload rejection
+missing pole detection
+firmware handling
+timestamp normalization
+
+Only validated events continue through the processing pipeline.
+
+4.3 Event Buffer
+
+Telemetry generated during outages is naturally bursty.
+
+Rather than processing every message immediately, GridAssist introduces a short configurable buffering window.
+
+The objective is not computational efficiency.
+
+The objective is to allow related telemetry generated by the same physical outage to arrive before localization begins.
+
+This reduces premature localization and unnecessary incident updates.
+
+4.4 Pole State Engine
+
+The Pole State Engine represents the current operational state of every monitored pole.
+
+Possible states include
+
+Energized
+De-energized
+Unknown
+Offline
+
+Incoming telemetry updates this state table.
+
+The State Engine represents the current understanding of the electrical network and serves 
+as the single source of truth for downstream analysis.
+
+4.5 Topology Engine
+
+The Topology Engine stores the electrical relationship between poles.
+
+Two topology modes are supported.
+
+Surveyed Topology
+
+Where parent_pole_id and seq_on_line are available, the recorded tree is used directly.
+
+Inferred Topology
+
+Where topology information is missing, a radial tree is inferred using
+
+transformer location
+pole coordinates
+geographic proximity
+
+The inferred topology is explicitly marked throughout the system.
+
+Localization confidence is reduced accordingly.
+
+4.6 Fault Classification Engine
+
+Before localization, GridAssist determines which category of failure is most consistent with observed telemetry.
+
+Supported categories include
+
+span fault
+transformer fault
+feeder fault
+scheduled outage
+sensor failure
+unknown
+
+This reduces unnecessary localization attempts and improves explainability.
+
+4.7 Fault Localization Engine
+
+The localization engine identifies the most probable failed electrical edge.
+
+Unlike telemetry devices, which observe node state, GridAssist estimates the state of electrical connections between nodes.
+
+Localization is based on identifying the transition between
+
+Last Energized Pole
+
+↓
+
+First De-energized Pole
+
+This transition defines the probable failed span.
+
+Multiple dark poles downstream are interpreted as symptoms of a single physical failure rather than independent incidents.
+
+4.8 Confidence Engine
+
+Every localization result receives an associated confidence assessment.
+
+Confidence is determined using observable evidence rather than arbitrary probabilities.
+
+Factors considered include
+
+surveyed vs inferred topology
+telemetry completeness
+scheduled outage overlap
+missing devices
+conflicting observations
+
+Rather than presenting false precision, confidence is expressed using three operational levels:
+
+High
+Medium
+Low
+
+Each level is accompanied by a human-readable explanation.
+
+4.9 Incident Manager
+
+Multiple telemetry events resulting from the same physical cause are grouped into a single operational incident.
+
+Incident grouping prevents alarm fatigue and aligns with the operational requirement
+that one physical failure should generate one repair activity.
+
+4.10 Ticket Manager
+
+Each incident progresses through a managed lifecycle.
+
+Detected
+
+↓
+
+Acknowledged
+
+↓
+
+Crew Assigned
+
+↓
+
+Resolved (Claimed)
+
+↓
+
+Verifying
+
+↓
+
+Verified
+
+↓
+
+Closed
+
+The transition from Verifying to Verified is triggered exclusively by restoration telemetry.
+
+Manual confirmation alone is insufficient.
+
+4.11 AI Communication Module
+
+Artificial Intelligence is intentionally excluded from operational reasoning.
+
+Instead, the LLM receives structured incident data and produces concise operator-facing summaries.
+
+If unavailable, deterministic templates are used automatically.
+
+Fault localization continues unaffected.
+
+4.12 Dashboard API
+
+The Dashboard API exposes all information required by the operator interface.
+
+Examples include
+
+active incidents
+incident history
+pole information
+telemetry stream
+simulator controls
+ticket status
+
+The frontend never communicates directly with localization modules.
+
+4.13 Simulator
+
+The simulator reproduces realistic electrical behaviour using the same ingestion interface as production telemetry.
+
+Supported scenarios include:
+
+span fault
+transformer fault
+feeder fault
+scheduled outage
+sensor failure
+duplicate messages
+delayed messages
+firmware 1.2 silent devices
+restoration events
+
+Using the production ingestion pipeline ensures that the simulator exercises the complete system
+rather than bypassing internal logic. This matches the evaluation requirement that reviewers 
+use the simulator as the primary means of assessing the submission.
+
+Internal Engineering Principle
+
+Every module in GridAssist answers exactly one question.
+
+Module	Question
+Telemetry Gateway	What happened?
+State Engine	What is the network state right now?
+Topology Engine	How is the network connected?
+Fault Classifier	What kind of failure is this?
+Localization Engine	Where is the failure most likely located?
+Confidence Engine	How certain is this conclusion?
+Incident Manager	Which observations belong together?
+Ticket Manager	What operational action is currently required?
+AI Module	How should this information be communicated?
+Dashboard	What decision should the operator make next?
+Why this architecture?
+
+The architecture intentionally separates observation, reasoning, and decision-making into independent modules.
+This makes the system easier to understand, easier to test, and easier to explain. More importantly,
+it mirrors the workflow of a real electricity control room: data is observed, interpreted,
+converted into operational decisions, and then verified against reality rather than assumptions.

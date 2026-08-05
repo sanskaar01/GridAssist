@@ -102,16 +102,16 @@ export const ActivityTimelinePanel: React.FC<Props> = ({ selectedIncident, match
   };
 
   return (
-    <footer className="h-24 bg-[#0D1117] border-t border-[#30363D] px-4 py-2 text-xs flex flex-col justify-between font-mono">
-      <div className="flex items-center justify-between text-[11px] font-bold text-gray-400 border-b border-[#21262D] pb-1">
+    <footer className="h-16 md:h-20 shrink-0 max-h-[84px] bg-[#0D1117] border-t border-[#30363D] px-4 py-1.5 text-xs flex flex-col justify-between font-mono">
+      <div className="flex items-center justify-between text-[11px] font-bold text-gray-400 border-b border-[#21262D] pb-0.5">
         <span className="flex items-center gap-1.5 text-gray-200">
           <Clock className="w-3.5 h-3.5 text-blue-400" />
           ACTIVITY TIMELINE — INCIDENT #{selectedIncident ? selectedIncident.id.substring(0, 8) : 'S04-RESTORATION'}
         </span>
-        <span className="text-gray-400">CHRONOLOGICAL EVENT LOG</span>
+        <span className="text-gray-400 text-[10px]">CHRONOLOGICAL EVENT LOG</span>
       </div>
 
-      <div className="flex items-center gap-4 overflow-x-auto py-1 scrollbar-thin">
+      <div className="flex items-center gap-3 overflow-x-auto py-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
         {mergedTimeline.map((item, idx) => {
           const timeFormatted = new Date(item.timestamp).toLocaleTimeString('en-IN', {
             hour12: false,

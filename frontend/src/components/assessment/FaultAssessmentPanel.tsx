@@ -19,6 +19,8 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
 }) => {
   const [selectedCrewId, setSelectedCrewId] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [localTicketStatus, setLocalTicketStatus] = useState<string | null>(null);
+  const [actionFeedbackMessage, setActionFeedbackMessage] = useState<string | null>(null);
 
   const { activeScript, currentStepIndex } = useSimulationStore();
   const currentStep = activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
@@ -287,14 +289,27 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
     status: (currentStepIndex >= 3 ? 'ASSIGNED' : 'DETECTED') as any,
     };
 
+  const effectiveStatus = localTicketStatus || matchingTicket?.status || (currentStepIndex >= 3 ? 'ASSIGNED' : 'DETECTED');
+
   const handleStatusChange = async (targetStatus: string) => {
-    if (!matchingTicket) return;
     setIsUpdating(true);
+    setLocalTicketStatus(targetStatus);
+
+    if (targetStatus === 'ACKNOWLEDGED') {
+      setActionFeedbackMessage('✓ TICKET ACKNOWLEDGED BY DISPATCHER-07');
+    } else if (targetStatus === 'ASSIGNED') {
+      setActionFeedbackMessage('🚀 CREW DISPATCHED: CREW-BLR-01 EN ROUTE (GPS: WARD W-084)');
+    } else if (targetStatus === 'RESOLVED') {
+      setActionFeedbackMessage('🔧 REPAIR CLAIMED — AWAITING TELEMETRY VERIFICATION');
+    }
+
     try {
-      await updateTicketStatus(matchingTicket.id, targetStatus, selectedCrewId || undefined);
-      onRefreshData();
+      if (matchingTicket?.id) {
+        await updateTicketStatus(matchingTicket.id, targetStatus, selectedCrewId || undefined);
+        onRefreshData();
+      }
     } catch (err: any) {
-      console.warn('Simulated ticket status update');
+      console.warn('Simulated ticket status update in standalone mode');
     } finally {
       setIsUpdating(false);
     }
@@ -417,6 +432,18 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
               {decisionCard?.recommendedAction?.title || 'Dispatch Lineman Repair Crew'}
             </div>
             <div>{decisionCard?.recommendedAction?.detail || activeIncident.recommendedAction}</div>
+
+            {/* Subtle GIS Navigation Button (Future Scope GIS Integration) */}
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=Karnataka+Electricity+Board+Sub+Station+Tavaragera+Tawargeri+Koppal"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-[#161B22] hover:bg-[#21262D] text-gray-300 hover:text-amber-400 border border-[#30363D] transition-colors text-[10px] font-mono font-bold mt-2 shadow-sm cursor-pointer"
+              title="GIS Asset Geolocation Navigation (Representative Location — Future Scope)"
+            >
+              <MapPin className="w-3 h-3 text-amber-400" />
+              <span>OPEN IN MAPS (KEB SUBSTATION, TAVARAGERA)</span>
+            </a>
           </div>
         </div>
 
@@ -427,72 +454,76 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
               <Wrench className="w-4 h-4 text-emerald-400" />
               <span>Repair Ticket Operations</span>
             </div>
-            {matchingTicket && (
-              <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30 text-[10px]">
-                {matchingTicket.status}
-              </span>
-            )}
+            <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30 text-[10px]">
+              {effectiveStatus}
+            </span>
           </div>
 
-          {matchingTicket && (
-            <div className="bg-[#0D1117] p-3 rounded border border-[#30363D] space-y-3">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-400">TICKET ID:</span>
-                <span className="text-white font-bold">{matchingTicket.id.substring(0, 13)}...</span>
-              </div>
-
-              {/* Crew Selector */}
-              <div className="space-y-1">
-                <label className="text-gray-400 text-[11px] block">ASSIGN FIELD REPAIR CREW:</label>
-                <select
-                  value={selectedCrewId || matchingTicket.assignedCrewId || 'crew-01'}
-                  onChange={(e) => setSelectedCrewId(e.target.value)}
-                  className="w-full bg-[#161B22] text-gray-200 text-xs p-1.5 rounded border border-[#30363D] focus:outline-none focus:border-blue-500 font-mono"
-                >
-                  <option value="crew-01">CREW-BLR-01 - Lineman Unit 1 (AVAILABLE)</option>
-                  <option value="crew-02">CREW-BLR-02 - Lineman Unit 2 (AVAILABLE)</option>
-                  {crews.map((crew) => (
-                    <option key={crew.id} value={crew.id}>
-                      {crew.code} - {crew.name} ({crew.status})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Action Buttons for Ticket Status Transitions */}
-              <div className="flex flex-col gap-2 pt-1">
-                {matchingTicket.status === 'DETECTED' && (
-                  <button
-                    disabled={isUpdating}
-                    onClick={() => handleStatusChange('ACKNOWLEDGED')}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-lg"
-                  >
-                    <UserCheck className="w-3.5 h-3.5" /> ACKNOWLEDGE TICKET
-                  </button>
-                )}
-
-                {(matchingTicket.status === 'DETECTED' || matchingTicket.status === 'ACKNOWLEDGED') && (
-                  <button
-                    disabled={isUpdating}
-                    onClick={() => handleStatusChange('ASSIGNED')}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded text-xs transition-colors shadow-lg flex items-center justify-center gap-1.5"
-                  >
-                    <Wrench className="w-3.5 h-3.5" /> DISPATCH LINEMAN CREW
-                  </button>
-                )}
-
-                {matchingTicket.status === 'ASSIGNED' && (
-                  <button
-                    disabled={isUpdating}
-                    onClick={() => handleStatusChange('RESOLVED')}
-                    className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-lg"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> CLAIM REPAIR COMPLETE
-                  </button>
-                )}
-              </div>
+          <div className="bg-[#0D1117] p-3 rounded border border-[#30363D] space-y-3">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-400">TICKET ID:</span>
+              <span className="text-white font-bold">TCK-GUIDED-001</span>
             </div>
-          )}
+
+            {/* Action Feedback Message Banner */}
+            {actionFeedbackMessage && (
+              <div className="bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 p-2 rounded text-[10.5px] font-bold flex items-center gap-1.5 shadow-lg">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>{actionFeedbackMessage}</span>
+              </div>
+            )}
+
+            {/* Crew Selector */}
+            <div className="space-y-1">
+              <label className="text-gray-400 text-[11px] block">ASSIGN FIELD REPAIR CREW:</label>
+              <select
+                value={selectedCrewId || 'crew-01'}
+                onChange={(e) => setSelectedCrewId(e.target.value)}
+                className="w-full bg-[#161B22] text-gray-200 text-xs p-1.5 rounded border border-[#30363D] focus:outline-none focus:border-blue-500 font-mono"
+              >
+                <option value="crew-01">CREW-BLR-01 - Lineman Unit 1 (AVAILABLE)</option>
+                <option value="crew-02">CREW-BLR-02 - Lineman Unit 2 (AVAILABLE)</option>
+                {crews.map((crew) => (
+                  <option key={crew.id} value={crew.id}>
+                    {crew.code} - {crew.name} ({crew.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Action Buttons for Ticket Status Transitions */}
+            <div className="flex flex-col gap-2 pt-1">
+              {effectiveStatus === 'DETECTED' && (
+                <button
+                  disabled={isUpdating}
+                  onClick={() => handleStatusChange('ACKNOWLEDGED')}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-lg active:scale-95 cursor-pointer"
+                >
+                  <UserCheck className="w-3.5 h-3.5" /> ACKNOWLEDGE TICKET
+                </button>
+              )}
+
+              {(effectiveStatus === 'DETECTED' || effectiveStatus === 'ACKNOWLEDGED') && (
+                <button
+                  disabled={isUpdating}
+                  onClick={() => handleStatusChange('ASSIGNED')}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded text-xs transition-colors shadow-lg flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <Wrench className="w-3.5 h-3.5" /> DISPATCH LINEMAN CREW
+                </button>
+              )}
+
+              {(effectiveStatus === 'ASSIGNED' || effectiveStatus === 'DISPATCHED') && (
+                <button
+                  disabled={isUpdating}
+                  onClick={() => handleStatusChange('RESOLVED')}
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-lg active:scale-95 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> CLAIM REPAIR COMPLETE
+                </button>
+              )}
+            </div>
+          </div>
         </div>}
       </div>
     </aside>

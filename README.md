@@ -12,7 +12,7 @@
 
 *GridAssist is a mission-critical electrical distribution grid command center that ingests IoT sensor telemetry, traverses radial network trees, and isolates physical line breaks using the **Fault Frontier** principle—visualized live in an interactive SCADA Operations Theater.*
 
-[Documentation](docs/README.md) • [System Architecture](ARCHITECTURE.md) • [Guided Scenarios](docs/scenarios/ScenarioStoryboards.md) • [Roadmap](ROADMAP.md)
+[Documentation](docs/README.md) • [System Architecture](docs/architecture/ARCHITECTURE.md) • [Guided Scenarios](docs/scenarios/ScenarioStoryboards.md) • [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -137,14 +137,14 @@ Open [http://localhost:5173](http://localhost:5173) in your browser to launch th
 
 | Category | Specification Document | Description |
 | :--- | :--- | :--- |
-| **System Architecture** | 📄 [ARCHITECTURE.md](ARCHITECTURE.md) | High-level system design & subsystem flowcharts. |
-| **Visual Specifications** | 📄 [VISUAL_LANGUAGE.md](docs/operations-theater/VisualLanguage.md) | SCADA color tokens, node symbols, and visual hierarchy. |
-| **Interaction Specs** | 📄 [INTERACTION_MODEL.md](docs/operations-theater/InteractionModel.md) | Direct graph manipulation, Guided Mode, and shortcuts. |
-| **Scenario Storyboards** | 📄 [SCENARIO_STORYBOARDS.md](docs/scenarios/ScenarioStoryboards.md) | Cinematic visual storyboards for 6 core outage scenarios. |
-| **Animation Architecture** | 📄 [ANIMATION_ARCHITECTURE.md](docs/operations-theater/AnimationArchitecture.md) | Particle motion physics formulas and keyframe curves. |
-| **Scenario Runtime** | 📄 [SCENARIO_RUNTIME.md](docs/scenarios/ScenarioRuntime.md) | Declarative script engine and synchronous step-run API. |
-| **Graph Layout Engine** | 📄 [GRAPH_LAYOUT_ENGINE.md](docs/operations-theater/GraphLayoutEngine.md) | Asymmetric irregular feeder tree coordinate algorithms. |
-| **Documentation Catalog** | 📄 [docs/README.md](docs/README.md) | Complete directory index of all 16 technical specs. |
+| **System Architecture** | 📄 [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | High-level system design & subsystem flowcharts. |
+| **Visual Specifications** | 📄 [VISUAL_LANGUAGE.md](docs/experience/VISUAL_LANGUAGE.md) | SCADA color tokens, node symbols, and visual hierarchy. |
+| **Interaction Specs** | 📄 [INTERACTION_MODEL.md](docs/experience/INTERACTION_MODEL.md) | Direct graph manipulation, Guided Mode, and shortcuts. |
+| **Scenario Storyboards** | 📄 [SCENARIO_STORYBOARDS.md](docs/experience/SCENARIO_STORYBOARDS.md) | Cinematic visual storyboards for 6 core outage scenarios. |
+| **Animation Architecture** | 📄 [ANIMATION_ARCHITECTURE.md](docs/animation/ANIMATION_ARCHITECTURE.md) | Particle motion physics formulas and keyframe curves. |
+| **Scenario Runtime** | 📄 [SCENARIO_RUNTIME.md](docs/experience/SCENARIO_RUNTIME.md) | Declarative script engine and synchronous step-run API. |
+| **Graph Layout Engine** | 📄 [GRAPH_LAYOUT_ENGINE.md](docs/architecture/GRAPH_LAYOUT_ENGINE.md) | Asymmetric irregular feeder tree coordinate algorithms. |
+| **Documentation Catalog** | 📄 [docs/README.md](docs/README.md) | Complete directory index of all technical specs. |
 
 ---
 
