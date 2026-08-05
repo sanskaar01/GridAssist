@@ -424,7 +424,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         targetZoom: targetZoom,
       };
     } else if (!selectedIncident && (!isGuidedMode || currentStepIndex === 0)) {
-      // Smooth return to default overview bounds (650ms Quartic Out)
+      // Smooth return to default overview bounds at 50% scale (650ms Quartic Out)
       cameraAnimRef.current = {
         active: true,
         startTime: performance.now(),
@@ -432,7 +432,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         startPan: { ...panOffset },
         targetPan: { x: 50, y: 30 },
         startZoom: zoomLevel,
-        targetZoom: 1.0,
+        targetZoom: 0.5,
       };
     }
   }, [selectedIncident, isGuidedMode, activeScript, currentStepIndex, computeGraphLayout]);
