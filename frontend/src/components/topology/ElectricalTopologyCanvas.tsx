@@ -338,7 +338,10 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     const poleCode = pole.id.startsWith('P-') ? pole.id : `P-${pole.id.substring(0, 6)}`;
     const isScriptDark = scriptDarkPoleCodes.includes(poleCode);
     const dbState = pole.poleState?.currentState || pole.currentState;
-    const isDark = isScriptDark || dbState === 'DARK';
+    // Guided scenarios render from their explicit scripted graph state. This
+    // prevents asynchronously refreshed telemetry from darkening a different
+    // branch than the scenario's isolated electrical subtree.
+    const isDark = isScriptDark || (!isGuidedMode && dbState === 'DARK');
     const currentState = isDark ? 'DARK' : 'LIVE';
     const children = childrenMap.get(pole.id) || [];
 
@@ -384,7 +387,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
       let isFaultSpan = false;
       if (scriptIsolatedSpan && scriptIsolatedSpan.parentCode === parentCode && scriptIsolatedSpan.childCode === childCode) {
         isFaultSpan = true;
-      } else if (selectedInc && selectedInc.faultType === 'SPAN') {
+      } else if (!scriptIsolatedSpan && selectedInc && selectedInc.faultType === 'SPAN') {
         if (
           (selectedInc.decisionCard?.suspectedParentPoleCode === parentCode || selectedInc.suspectedParentPoleId === pole.id) &&
           (selectedInc.decisionCard?.suspectedChildPoleCode === childCode || selectedInc.suspectedChildPoleId === child.id)
@@ -493,6 +496,27 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     const render = (time: number) => {
       const { width, height } = canvas;
       ctx.clearRect(0, 0, width, height);
+
+      // Severe-weather context layer. The drop paths are time-based rather
+      // than random so the visual remains deterministic and unobtrusive.
+      const isStormActive =
+        activeScript.id === 'severe-weather' && currentStepIndex >= 1 && currentStepIndex < activeScript.steps.length - 1;
+      if (isStormActive) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(147, 197, 253, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+
+        for (let drop = 0; drop < 56; drop++) {
+          const x = (drop * 89 + time * 0.12) % (width + 40) - 20;
+          const y = (drop * 53 + time * 0.42) % (height + 34) - 17;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 5, y + 15);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       // 1. PROCESS CAMERA ANIMATION MATRIX (650ms Quartic Out)
       if (cameraAnimRef.current.active) {
@@ -653,7 +677,11 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.fillText(node.code, node.x, node.y - 22);
         } else if (node.type === 'TRANSFORMER') {
           const size = 24;
-          const isDtScriptDark = activeScript.id === 'transformer-failure' && currentStepIndex > 0 && currentStepIndex < activeScript.steps.length - 1 && node.code === 'D-0102';
+          const isDtScriptDark =
+            (activeScript.id === 'transformer-failure' || activeScript.id === 'severe-weather') &&
+            currentStepIndex > (activeScript.id === 'severe-weather' ? 2 : 0) &&
+            currentStepIndex < activeScript.steps.length - 1 &&
+            node.code === 'D-0102';
           const isDtFault = isDtScriptDark || (selectedIncident?.faultType === 'DT' && selectedIncident.transformerId === node.transformerId);
 
           ctx.fillStyle = isDtFault ? '#EF4444' : '#F59E0B';

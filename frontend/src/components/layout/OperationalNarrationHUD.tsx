@@ -23,6 +23,11 @@ export const OperationalNarrationHUD: React.FC = () => {
 
   const narration = currentStep.narration;
   const isLastStep = currentStepIndex >= activeScript.steps.length - 1;
+  const isSensorAnomaly = activeScript.category === 'SENSOR_ANOMALY';
+  const completionTitle = isSensorAnomaly
+    ? 'ALERT CLEARED — GRID OPERATING NORMALLY'
+    : 'INCIDENT RESOLVED — TELEMETRY VERIFIED';
+  const finalActionLabel = isSensorAnomaly ? 'RETURN TO MONITORING' : 'CONFIRM INCIDENT RESOLVED';
 
   const handleStepButtonClick = async () => {
     if (isLastStep || isCompleted) {
@@ -55,7 +60,7 @@ export const OperationalNarrationHUD: React.FC = () => {
             </span>
             <span className={`font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 ${isCompleted ? 'text-emerald-400' : 'text-amber-400'}`}>
               {isCompleted ? <Award className="w-4 h-4 text-emerald-400" /> : <ShieldCheck className="w-4 h-4 text-amber-400" />}
-              {isCompleted ? 'MISSION COMPLETE — INCIDENT RESOLVED & VERIFIED' : `MISSION BRIEFING — STEP ${currentStepIndex + 1}/${activeScript.steps.length}`}
+              {isCompleted ? completionTitle : `ACTIVE OPERATION — STEP ${currentStepIndex + 1}/${activeScript.steps.length}`}
             </span>
             <span className="text-[11px] text-gray-400 bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D]">
               {activeScript.title}
@@ -69,19 +74,19 @@ export const OperationalNarrationHUD: React.FC = () => {
             >
               {isCollapsed ? (
                 <>
-                  <span>EXPAND BRIEFING</span>
+                  <span>EXPAND DETAILS</span>
                   <ChevronDown className="w-3 h-3 text-amber-400" />
                 </>
               ) : (
                 <>
-                  <span>COLLAPSE BRIEFING</span>
+                  <span>COLLAPSE DETAILS</span>
                   <ChevronUp className="w-3 h-3 text-amber-400" />
                 </>
               )}
             </button>
           </div>
 
-          {/* Guided Step Controls & Mission Complete Action Buttons */}
+          {/* Guided step controls and resolved-incident actions */}
           <div className="flex items-center gap-2">
             {isCompleted ? (
               <div className="flex items-center gap-2">
@@ -91,7 +96,7 @@ export const OperationalNarrationHUD: React.FC = () => {
                   className="font-bold px-3 py-1 rounded flex items-center gap-1 bg-[#161B22] hover:bg-[#21262D] text-amber-400 border border-amber-500/40 text-xs shadow cursor-pointer transition-all"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>RESET GRID</span>
+                  <span>RESET TO LIVE GRID</span>
                 </button>
                 <button
                   type="button"
@@ -116,7 +121,7 @@ export const OperationalNarrationHUD: React.FC = () => {
                   {isLastStep ? (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>FINISH SCENARIO</span>
+                      <span>{finalActionLabel}</span>
                     </>
                   ) : (
                     <>
@@ -130,25 +135,25 @@ export const OperationalNarrationHUD: React.FC = () => {
           </div>
         </div>
 
-        {/* Mission Briefing Card Content / Mission Complete Summary Checklist */}
+        {/* Active operation detail / resolved status checklist */}
         {!isCollapsed && (
           isCompleted ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-emerald-950/80 p-2 rounded border border-emerald-500/40 mt-0.5 font-mono text-[11px]">
               <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>✔ POWER RESTORED</span>
+                <span>{isSensorAnomaly ? '✔ NO OUTAGE CONFIRMED' : '✔ POWER RESTORED'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>✔ INCIDENT RESOLVED</span>
+                <span>{isSensorAnomaly ? '✔ FALSE ALARM BLOCKED' : '✔ INCIDENT RESOLVED'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>✔ 3/3 POLES VERIFIED</span>
+                <span>{isSensorAnomaly ? '✔ GRID OPERATING NORMALLY' : '✔ TELEMETRY VERIFIED'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>✔ TICKET CLOSED</span>
+                <span>{isSensorAnomaly ? '✔ ROUTINE INSPECTION FLAGGED' : '✔ TICKET CLOSED'}</span>
               </div>
             </div>
           ) : (
@@ -177,7 +182,7 @@ export const OperationalNarrationHUD: React.FC = () => {
               <div className="space-y-0.5">
                 <div className="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1">
                   <Cpu className="w-3 h-3 text-emerald-400" />
-                  <span>ALGORITHMIC DEDUCTION</span>
+                  <span>DECISION BASIS</span>
                 </div>
                 <div className="text-emerald-300 text-[10px] leading-relaxed">
                   {narration.algorithmicReason}

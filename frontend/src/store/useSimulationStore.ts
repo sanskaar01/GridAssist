@@ -154,20 +154,23 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
     const nextToken = get().gridResetToken + 1;
 
-    set({
-      isPlayingAuto: false,
-      currentStepIndex: 0,
-      isGuidedMode: true,
-      isExecutingStep: false,
-      isCompleted: false,
-      error: null,
-      gridResetToken: nextToken,
-    });
-
     try {
       await resetGridSimulation();
     } catch (err) {
       console.error('Failed to reset grid:', err);
+    } finally {
+      // Return to the same healthy overview shown at page load. In particular,
+      // do not retain Scenario 4's step-zero outage as the post-reset state.
+      set({
+        activeScript: ALL_SCRIPTS[0],
+        isPlayingAuto: false,
+        currentStepIndex: 0,
+        isGuidedMode: true,
+        isExecutingStep: false,
+        isCompleted: false,
+        error: null,
+        gridResetToken: nextToken,
+      });
     }
   },
 }));
