@@ -28,8 +28,12 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
   if (!activeIncident && currentStepIndex > 0) {
     const isDTFault = activeScript.category === 'DT_FAULT';
     const isSensorAnomaly = activeScript.category === 'SENSOR_ANOMALY';
+    const isRestoration = activeScript.category === 'RESTORATION';
     const parentCode = currentStep?.expectedState?.isolatedSpan?.parentCode || currentStep?.narration?.isolatedSpan?.parentCode || 'P-003';
     const childCode = currentStep?.expectedState?.isolatedSpan?.childCode || currentStep?.narration?.isolatedSpan?.childCode || 'P-004';
+
+    const isPrematureClaim = isRestoration && currentStepIndex === 1;
+    const isVerifiedRestoration = isRestoration && currentStepIndex >= 2;
 
     activeIncident = {
       id: isDTFault ? 'INC-DT-D0102' : isSensorAnomaly ? 'INC-SENSOR-P003' : 'INC-GUIDED-01',
@@ -39,7 +43,21 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
       suspectedChildPoleId: isDTFault ? 'P-026' : childCode,
       confidence: 'HIGH',
       evidence: {
-        items: isSensorAnomaly
+        items: isPrematureClaim
+          ? [
+              `Lineman CREW-BLR-01 pressed "Repair Complete"`,
+              `System entered VERIFYING state to wait for push telemetry`,
+              `IoT Sensors P-004, P-005, P-006 STILL report 0 V (DARK)`,
+              `VERIFICATION REJECTED: System refuses to trust manual click while network remains broken`,
+            ]
+          : isVerifiedRestoration
+          ? [
+              `[✓] Push POWER_RESTORED telemetry ingested (230 V)`,
+              `[✓] 3/3 affected poles verified energized`,
+              `[✓] Fault Frontier no longer exists`,
+              `[✓] Incident RESOLVED; Ticket automatically CLOSED`,
+            ]
+          : isSensorAnomaly
           ? [
               `IoT Sensor DEV-W084-D0101-P003 emitted POWER_LOST (Seq #401)`,
               `Device Health: Battery 14% (LOW)`,
@@ -59,7 +77,17 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
             ],
       },
       assumptions: {
-        items: isSensorAnomaly
+        items: isPrematureClaim
+          ? [
+              `Requirement #4 Enforcement: Closure claim rejected until push POWER_RESTORED telemetry arrives`,
+              `Fault frontier glow remains active on canvas`,
+            ]
+          : isVerifiedRestoration
+          ? [
+              `Automated Telemetry Verification Complete (Requirement #4 Satisfied)`,
+              `Ticket status: VERIFIED & CLOSED`,
+            ]
+          : isSensorAnomaly
           ? [
               `Telemetry reports power loss at P-003, but downstream energized poles prove conductor remains energized`,
               `EMERGENCY DISPATCH: ❌ CANCELLED (Zero outage ticket created)`,
