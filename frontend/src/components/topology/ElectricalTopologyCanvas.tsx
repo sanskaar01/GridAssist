@@ -827,11 +827,11 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
               startPan: { ...panOffset },
               targetPan: { x: 50, y: 30 },
               startZoom: zoomLevel,
-              targetZoom: 1.0,
+              targetZoom: 0.5,
             };
           }}
           className="px-2.5 h-8 flex items-center gap-1 bg-[#0D1117] hover:bg-[#21262D] text-amber-400 hover:text-amber-300 rounded-lg border border-[#30363D] transition-all active:scale-95 text-[11px] font-bold shadow cursor-pointer"
-          title="Recenter Grid View (100%)"
+          title="Recenter Macro View (50%)"
         >
           <span>🎯 RECENTER</span>
         </button>
