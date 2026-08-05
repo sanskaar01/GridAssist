@@ -145,7 +145,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     targetZoom: 1.0,
   });
 
-  const { isGuidedMode, activeScript, currentStepIndex } = useSimulationStore();
+  const { isGuidedMode, isPlayingAuto, activeScript, currentStepIndex } = useSimulationStore();
 
   const activeTransformers =
     transformers && transformers.length > 0 ? transformers : FALLBACK_TRANSFORMERS;
@@ -155,8 +155,8 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     const nodes: RenderNode[] = [];
     const edges: RenderEdge[] = [];
 
-    // Get current active script step for Guided Demo Mode state synchronization
-    const currentStep = isGuidedMode && activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
+    // Get current active script step for Guided Demo & Auto Play state synchronization
+    const currentStep = activeScript?.steps ? activeScript.steps[currentStepIndex] : null;
     const scriptDarkPoleCodes = currentStep?.expectedState?.darkPoleCodes || [];
     const scriptIsolatedSpan = currentStep?.narration?.isolatedSpan || currentStep?.expectedState?.isolatedSpan;
 
@@ -381,12 +381,12 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
     });
   };
 
-  // Camera Auto-Pan Trigger on Guided Step or Incident Selection (SSOT: CAMERA_ANIMATION_SPEC.md)
+  // Camera Auto-Pan Trigger on Guided/Auto Step or Incident Selection (SSOT: CAMERA_ANIMATION_SPEC.md)
   useEffect(() => {
     const { nodes, edges } = computeGraphLayout();
     let targetNode: RenderNode | undefined;
 
-    if (isGuidedMode && activeScript?.steps) {
+    if (activeScript?.steps) {
       const currentStep = activeScript.steps[currentStepIndex];
       const focusId = currentStep?.narration?.focusAssetId || currentStep?.expectedState?.darkPoleCodes?.[0];
       if (focusId) {
@@ -423,7 +423,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         startZoom: zoomLevel,
         targetZoom: targetZoom,
       };
-    } else if (!selectedIncident && (!isGuidedMode || currentStepIndex === 0)) {
+    } else if (!selectedIncident && currentStepIndex === 0) {
       // Smooth return to default overview bounds at 50% scale (650ms Quartic Out)
       cameraAnimRef.current = {
         active: true,
@@ -435,7 +435,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
         targetZoom: 0.5,
       };
     }
-  }, [selectedIncident, isGuidedMode, activeScript, currentStepIndex, computeGraphLayout]);
+  }, [selectedIncident, isGuidedMode, isPlayingAuto, activeScript, currentStepIndex, computeGraphLayout]);
 
   // Main Canvas Render Loop
   useEffect(() => {
