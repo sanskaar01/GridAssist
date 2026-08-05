@@ -1,4 +1,4 @@
-# ⚡ GridAssist — SCADA Operator Console & Decision Engine
+# GridAssist — SCADA Operator Console & Decision Engine
 
 > **A Note to the Evaluator**
 > 
@@ -21,7 +21,7 @@
 
 ---
 
-## 🏆 Submission Quality Gates Compliance (G1 – G6)
+## Submission Quality Gates Compliance (G1 – G6)
 
 This repository strictly complies with all 6 mandatory acceptance gates defined in `03-deliverables-and-submission.md`:
 
@@ -36,7 +36,7 @@ This repository strictly complies with all 6 mandatory acceptance gates defined 
 
 ---
 
-## ⏱️ Evaluator's Guided Scenario Engine (How to Test in 1 Click)
+## Evaluator's Guided Scenario Engine (How to Test in 1 Click)
 
 When you open **[`https://grid-assist.vercel.app`](https://grid-assist.vercel.app)**, the top navigation bar features a **Guided Scenario Controller HUD**. Click any button to run a live simulation:
 
@@ -70,7 +70,7 @@ When you open **[`https://grid-assist.vercel.app`](https://grid-assist.vercel.ap
 
 ---
 
-## 🧠 Core Engineering Architecture & AI Philosophy
+## Core Engineering Architecture & AI Philosophy
 
 ### Why Graph Mathematics (Not LLM) for Fault Localization
 The prompt posed a critical question: *Where does AI belong in the product?*
@@ -81,7 +81,7 @@ Our architectural decision was strict:
 
 ---
 
-## 🛠️ Explicit Decision Log & Trade-Offs
+##  Explicit Decision Log & Trade-Offs
 
 In accordance with `00-candidate-brief.md` ("*where it is ambiguous, make a decision, write down the assumption*"):
 
@@ -95,7 +95,7 @@ In accordance with `00-candidate-brief.md` ("*where it is ambiguous, make a deci
 
 ---
 
-## 🚀 Quick Start Guide
+##  Quick Start Guide
 
 ### Option A: One-Command Docker Setup (Recommended)
 ```bash
@@ -122,7 +122,7 @@ npm run dev
 
 ---
 
-## 📚 Technical Documentation Index
+## Technical Documentation Index
 
 All architectural specifications, algorithmic designs, and visual guidelines are indexed below:
 
