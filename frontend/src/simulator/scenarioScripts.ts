@@ -78,18 +78,18 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
     },
     {
       stepIndex: 2,
-      label: 'Subtree Outage Cascade (P-005 & P-006 DARK)',
+      label: 'Parallel Branch Remains Energized',
       deviceCode: 'DEV-W084-D0101-P005',
-      eventType: 'POWER_LOST',
+      eventType: 'HEARTBEAT',
       sequenceNumber: 102,
       narration: {
-        title: 'DOWNSTREAM CASCADE CONFIRMED — POLES P-005 & P-006',
-        detail: 'Child Poles P-005 and P-006 emitted POWER_LOST (Seq #102). Downstream subtree dark.',
-        algorithmicReason: 'Grouping Engine aggregates 3 raw alerts into 1 single Located Fault candidate under P-003.',
+        title: 'PARALLEL BRANCH CONFIRMED ENERGIZED',
+        detail: 'Poles P-005 and P-006 remain live on a separate branch from P-002. Only P-004 is isolated.',
+        algorithmicReason: 'Topology check confirms P-005 and P-006 are not downstream of Span P-003 → P-004.',
         focusAssetId: 'P-004',
       },
       expectedState: {
-        darkPoleCodes: ['P-004', 'P-005', 'P-006'],
+        darkPoleCodes: ['P-004'],
         incidentCreated: false,
         ticketCreated: false,
       },
@@ -97,7 +97,7 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
     {
       stepIndex: 3,
       label: 'Fault Frontier Isolation & Decision Card',
-      deviceCode: 'DEV-W084-D0101-P006',
+      deviceCode: 'DEV-W084-D0101-P004',
       eventType: 'POWER_LOST',
       sequenceNumber: 103,
       narration: {
@@ -109,7 +109,7 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
         ticketCreated: true,
       },
       expectedState: {
-        darkPoleCodes: ['P-004', 'P-005', 'P-006'],
+        darkPoleCodes: ['P-004'],
         isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' },
         incidentCreated: true,
         ticketCreated: true,
@@ -130,7 +130,7 @@ export const SCRIPT_SINGLE_SPAN_FAULT: SimulationScript = {
         ticketCreated: true,
       },
       expectedState: {
-        darkPoleCodes: ['P-004', 'P-005', 'P-006'],
+        darkPoleCodes: ['P-004'],
         isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' },
         incidentCreated: true,
         ticketCreated: true,
@@ -440,11 +440,99 @@ export const SCRIPT_POWER_RESTORATION: SimulationScript = {
   ],
 };
 
+export const SCRIPT_SEVERE_WEATHER: SimulationScript = {
+  id: 'severe-weather',
+  title: '5. Severe Weather Event',
+  subtitle: 'Two Independent Faults — Span P-003 → P-004 and Transformer D-0102',
+  category: 'MULTI_FAULT',
+  description: 'Demonstrates deterministic grouping, independent dispatch, and independent telemetry-driven restoration during a storm.',
+  targetTransformerCode: 'MULTI',
+  steps: [
+    {
+      stepIndex: 0, label: 'Normal Grid', deviceCode: 'DEV-SUBSTATION-01', eventType: 'HEARTBEAT', sequenceNumber: 600,
+      narration: {
+        title: 'NORMAL GRID — ALL FEEDERS ENERGIZED',
+        detail: 'Both transformer service areas are operating normally.',
+        algorithmicReason: 'No active outage boundaries detected.',
+      },
+      expectedState: { darkPoleCodes: [], incidentCreated: false, ticketCreated: false },
+    },
+    {
+      stepIndex: 1, label: 'Storm Telemetry Surge', deviceCode: 'DEV-W084-D0101-P004', eventType: 'POWER_LOST', sequenceNumber: 601,
+      narration: {
+        title: 'SEVERE WEATHER — TELEMETRY SURGE',
+        detail: 'Concurrent POWER_LOST packets are being received across W-084 and W-085.',
+        algorithmicReason: 'Events are held for topology grouping; no incident is localized yet.',
+      },
+      expectedState: { darkPoleCodes: [], incidentCreated: false, ticketCreated: false },
+    },
+    {
+      stepIndex: 2, label: 'Span Fault Localized', deviceCode: 'DEV-W084-D0101-P004', eventType: 'POWER_LOST', sequenceNumber: 602,
+      narration: {
+        title: 'SPAN FAULT LOCALIZED — P-003 → P-004',
+        detail: 'Only P-004 is isolated. The parallel P-005/P-006 branch remains energized.',
+        algorithmicReason: 'Live parent P-003 and dark child P-004 establish one fault frontier.',
+        isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, focusAssetId: 'P-004', incidentCreated: true, ticketCreated: true,
+      },
+      expectedState: { darkPoleCodes: ['P-004'], isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, incidentCreated: true, ticketCreated: true },
+    },
+    {
+      stepIndex: 3, label: 'Transformer Fault Localized', deviceCode: 'DEV-W085-D0102-P026', eventType: 'POWER_LOST', sequenceNumber: 603,
+      narration: {
+        title: 'DT FAILURE LOCALIZED — D-0102',
+        detail: 'All 20 poles beneath D-0102 are de-energized while the span fault remains separate.',
+        algorithmicReason: 'Feeder healthy; no internal live-to-dark frontier exists beneath D-0102.',
+        isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, focusAssetId: 'D-0102', incidentCreated: true, ticketCreated: true,
+      },
+      expectedState: { darkPoleCodes: ['P-004', 'P-026', 'P-027', 'P-028', 'P-029', 'P-030', 'P-031', 'P-032', 'P-033', 'P-034', 'P-035', 'P-036', 'P-037', 'P-038', 'P-039', 'P-040', 'P-041', 'P-042', 'P-043', 'P-044', 'P-045'], isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, incidentCreated: true, ticketCreated: true },
+    },
+    {
+      stepIndex: 4, label: 'Independent Incident Review', deviceCode: 'DEV-W085-D0102-P026', eventType: 'POWER_LOST', sequenceNumber: 604,
+      narration: {
+        title: 'TWO INDEPENDENT OUTAGES CONFIRMED',
+        detail: 'One LT span fault and one DT failure require separate tickets and crews.',
+        algorithmicReason: 'Geographically and topologically distinct outage groups remain separate.',
+        isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, incidentCreated: true, ticketCreated: true,
+      },
+      expectedState: { darkPoleCodes: ['P-004', 'P-026', 'P-027', 'P-028', 'P-029', 'P-030', 'P-031', 'P-032', 'P-033', 'P-034', 'P-035', 'P-036', 'P-037', 'P-038', 'P-039', 'P-040', 'P-041', 'P-042', 'P-043', 'P-044', 'P-045'], isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, incidentCreated: true, ticketCreated: true },
+    },
+    {
+      stepIndex: 5, label: 'Crews Assigned', deviceCode: 'DEV-W085-D0102-P026', eventType: 'POWER_LOST', sequenceNumber: 605,
+      narration: {
+        title: 'CREWS ASSIGNED TO INDEPENDENT OUTAGES',
+        detail: 'CREW-BLR-01 assigned to the span; CREW-BLR-02 assigned to D-0102.',
+        algorithmicReason: 'Each outage retains an independent ticket lifecycle.',
+        isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, incidentCreated: true, ticketCreated: true,
+      },
+      expectedState: { darkPoleCodes: ['P-004', 'P-026', 'P-027', 'P-028', 'P-029', 'P-030', 'P-031', 'P-032', 'P-033', 'P-034', 'P-035', 'P-036', 'P-037', 'P-038', 'P-039', 'P-040', 'P-041', 'P-042', 'P-043', 'P-044', 'P-045'], isolatedSpan: { parentCode: 'P-003', childCode: 'P-004' }, incidentCreated: true, ticketCreated: true },
+    },
+    {
+      stepIndex: 6, label: 'Span Restored', deviceCode: 'DEV-W084-D0101-P004', eventType: 'POWER_RESTORED', sequenceNumber: 606,
+      narration: {
+        title: 'SPAN RESTORED — TICKET CLOSED',
+        detail: 'P-004 restoration telemetry closes the span ticket. D-0102 remains out.',
+        algorithmicReason: 'Restoration is verified for the span only; the DT incident remains active.', focusAssetId: 'D-0102', incidentCreated: true, ticketCreated: true,
+      },
+      expectedState: { darkPoleCodes: ['P-026', 'P-027', 'P-028', 'P-029', 'P-030', 'P-031', 'P-032', 'P-033', 'P-034', 'P-035', 'P-036', 'P-037', 'P-038', 'P-039', 'P-040', 'P-041', 'P-042', 'P-043', 'P-044', 'P-045'], incidentCreated: true, ticketCreated: true },
+    },
+    {
+      stepIndex: 7, label: 'Transformer Restored', deviceCode: 'DEV-W085-D0102-P026', eventType: 'POWER_RESTORED', sequenceNumber: 607,
+      narration: {
+        title: 'D-0102 RESTORED — GRID NORMAL',
+        detail: 'Transformer restoration telemetry closes the final active ticket.',
+        algorithmicReason: 'All affected poles report energized; no outage boundaries remain.',
+      },
+      expectedState: { darkPoleCodes: [], incidentCreated: false, ticketCreated: false },
+    },
+  ],
+};
+
 export const ALL_SCRIPTS: SimulationScript[] = [
   SCRIPT_SINGLE_SPAN_FAULT,
   SCRIPT_TRANSFORMER_FAILURE,
   SCRIPT_SENSOR_ANOMALY,
   SCRIPT_POWER_RESTORATION,
+  SCRIPT_SEVERE_WEATHER,
 ];
 
 export function getScriptById(id: string): SimulationScript {

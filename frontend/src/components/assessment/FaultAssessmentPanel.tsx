@@ -28,7 +28,8 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
   const hasActiveOutageStep =
     currentStep?.expectedState?.darkPoleCodes?.length ||
     currentStep?.expectedState?.incidentCreated ||
-    (activeScript.id === 'power-restoration' && currentStepIndex <= 1);
+    (activeScript.id === 'power-restoration' && currentStepIndex <= 1) ||
+    (activeScript.category === 'SENSOR_ANOMALY' && currentStepIndex >= 1);
 
   if (!activeIncident && hasActiveOutageStep) {
     const isDTFault = activeScript.category === 'DT_FAULT';
@@ -39,6 +40,35 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
 
     const isPrematureClaim = isRestoration && currentStepIndex === 1;
     const isVerifiedRestoration = isRestoration && currentStepIndex >= 2;
+    const sensorEvidence = [
+      `IoT Sensor DEV-W084-D0101-P003 emitted POWER_LOST (Seq #401)`,
+      `Device Health: Battery 14% (LOW)`,
+      ...(currentStepIndex >= 2
+        ? [
+            `Downstream Child Pole P-004 reports LIVE state (230 V)`,
+            `Downstream Child Pole P-005 reports LIVE state (230 V)`,
+          ]
+        : []),
+      ...(currentStepIndex >= 3 ? [`Sensor P-003 resumed normal HEARTBEAT reporting`] : []),
+    ];
+    const sensorReasoning =
+      currentStepIndex >= 2
+        ? [
+            `Live downstream poles prove the conductor remains energized`,
+            `Emergency dispatch cancelled; no outage ticket created`,
+          ]
+        : [`Awaiting downstream topology validation before dispatch decision`];
+    const sensorRejectedAlternatives =
+      currentStepIndex >= 2
+        ? [
+            { hypothesis: 'Line Conductor Break', reason: 'Downstream child poles P-004 and P-005 remain energized' },
+            { hypothesis: 'Distribution Transformer Blowout', reason: 'Transformer D-0101 remains energized at 230 V' },
+          ]
+        : [];
+    const sensorAction =
+      currentStepIndex >= 2
+        ? `No emergency response. Schedule routine inspection for sensor DEV-W084-D0101-P003.`
+        : `Hold dispatch pending topology validation.`;
 
     activeIncident = {
       id: isDTFault ? 'INC-DT-D0102' : isSensorAnomaly ? 'INC-SENSOR-P003' : 'INC-GUIDED-01',
@@ -63,12 +93,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
               `[✓] Incident RESOLVED; Ticket automatically CLOSED`,
             ]
           : isSensorAnomaly
-          ? [
-              `IoT Sensor DEV-W084-D0101-P003 emitted POWER_LOST (Seq #401)`,
-              `Device Health: Battery 14% (LOW)`,
-              `Downstream Child Pole P-004 reports LIVE state (230 V)`,
-              `Downstream Child Pole P-005 reports LIVE state (230 V)`,
-            ]
+          ? sensorEvidence
           : isDTFault
           ? [
               `SCADA Diagnostics: 11kV Feeder F-07 (11.0 kV NORMAL) | Parallel DT D-0101 (230 V NORMAL)`,
@@ -93,10 +118,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
               `Ticket status: VERIFIED & CLOSED`,
             ]
           : isSensorAnomaly
-          ? [
-              `Telemetry reports power loss at P-003, but downstream energized poles prove conductor remains energized`,
-              `EMERGENCY DISPATCH: ❌ CANCELLED (Zero outage ticket created)`,
-            ]
+          ? sensorReasoning
           : isDTFault
           ? [
               `Distribution Transformer Output Failure on D-0102 (Most Probable Cause: HT Fuse Blowout)`,
@@ -109,10 +131,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
       },
       rejectedAlternatives: {
         items: isSensorAnomaly
-          ? [
-              { hypothesis: 'Line Conductor Break', reason: 'Downstream child poles (P-004, P-005) remain 100% energized' },
-              { hypothesis: 'Distribution Transformer Blowout', reason: 'Transformer D-0101 operating normally at 230 V' },
-            ]
+          ? sensorRejectedAlternatives
           : isDTFault
           ? [
               { hypothesis: '11kV Feeder Blackout', reason: 'Substation SUB-01 and Parallel DT D-0101 remain energized' },
@@ -124,7 +143,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
             ],
       },
       recommendedAction: isSensorAnomaly
-        ? `Operational Decision: No emergency response. Schedule routine inspection for sensor DEV-W084-D0101-P003.`
+        ? sensorAction
         : isDTFault
         ? `Dispatch Specialized HT Crew CREW-BLR-02 to Distribution Transformer D-0102 in Ward W-085 (PIN 560078).`
         : `Dispatch Lineman Crew CREW-BLR-01 to Span ${parentCode} -> ${childCode} in Ward W-084 (PIN 560078).`,
@@ -152,12 +171,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
         affectedPolesCount: currentStep?.expectedState?.darkPoleCodes?.length || 0,
         affectedPoleIds: currentStep?.expectedState?.darkPoleCodes || [],
         evidence: isSensorAnomaly
-          ? [
-              'IoT Sensor DEV-W084-D0101-P003 emitted POWER_LOST',
-              'Device Health: Battery 14% (LOW)',
-              'Downstream Child Pole P-004 reports LIVE state (230 V)',
-              'Downstream Child Pole P-005 reports LIVE state (230 V)',
-            ]
+          ? sensorEvidence
           : isDTFault
           ? [
               'SCADA: Feeder F-07 11.0 kV NORMAL | Parallel DT D-0101 230 V NORMAL',
@@ -170,23 +184,37 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
               `Downstream poles ${currentStep?.expectedState?.darkPoleCodes?.join(', ') || ''} dark`,
               `Parent Pole ${parentCode} live; Fault frontier isolated`,
             ],
-        assumptions: isDTFault
+        assumptions: isSensorAnomaly
+          ? sensorReasoning
+          : isDTFault
           ? ['Distribution Transformer Output Failure on D-0102 (Most Probable Cause: HT Fuse Blowout)']
           : [`Overhead conductor break on Span ${parentCode} -> ${childCode}`],
-        rejectedAlternatives: isDTFault
+        rejectedAlternatives: isSensorAnomaly
+          ? sensorRejectedAlternatives
+          : isDTFault
           ? [{ hypothesis: '11kV Feeder Blackout', reason: 'Substation SUB-01 and Parallel DT D-0101 remain energized' }]
           : [{ hypothesis: 'Transformer Blowout', reason: 'Parallel branches live' }],
         recommendedAction: {
-          title: isDTFault
+          title: isSensorAnomaly
+            ? currentStepIndex >= 2
+              ? 'No Emergency Dispatch'
+              : 'Topology Validation Pending'
+            : isDTFault
             ? 'Dispatch Specialized HT Crew CREW-BLR-02 to D-0102'
             : `Dispatch Lineman Crew to Span ${parentCode} -> ${childCode}`,
-          detail: isDTFault
+          detail: isSensorAnomaly
+            ? sensorAction
+            : isDTFault
             ? 'Dispatch Specialized HT Crew CREW-BLR-02 to Distribution Transformer D-0102 in Ward W-085 (PIN 560078).'
             : `Dispatch Lineman Crew CREW-BLR-01 to Ward W-084 (PIN 560078).`,
           targetCoordinates: { latitude: isDTFault ? 12.9725 : 12.9716, longitude: isDTFault ? 77.6425 : 77.6412 },
           estimatedInspectionDistanceMeters: 45,
         },
-        explanation: isDTFault
+        explanation: isSensorAnomaly
+          ? currentStepIndex >= 2
+            ? 'Topology validation rejected the outage signal.'
+            : 'Telemetry received; topology validation in progress.'
+          : isDTFault
           ? 'SCADA voltage collapse and 20/20 downstream de-energization confirmed Distribution Transformer Output Failure.'
           : 'Deterministic graph traversal algorithm identified exact conductor break.',
       },
@@ -194,12 +222,15 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
   }
 
   const { isCompleted } = useSimulationStore();
+  const isSensorAnomaly = activeScript.category === 'SENSOR_ANOMALY';
 
   if (isCompleted || (currentStepIndex >= activeScript.steps.length - 1 && currentStep?.eventType === 'POWER_RESTORED')) {
     return (
       <aside className="w-[25%] min-w-[320px] bg-[#161B22] border-l border-[#30363D] flex flex-col h-full text-xs p-6 items-center justify-center text-center font-mono select-none">
         <Award className="w-14 h-14 text-emerald-400 mb-3" />
-        <h3 className="text-emerald-400 font-bold text-sm uppercase tracking-wider">MISSION COMPLETE</h3>
+        <h3 className="text-emerald-400 font-bold text-sm uppercase tracking-wider">
+          {isSensorAnomaly ? 'ALERT CLEARED' : 'INCIDENT RESOLVED'}
+        </h3>
         <p className="text-gray-300 text-[11px] mt-1 font-bold">{activeScript.title}</p>
 
         <div className="bg-[#0D1117] p-3 rounded-lg border border-emerald-500/30 w-full text-left space-y-2 mt-4 text-[10px]">
@@ -207,25 +238,29 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
             <span>OPERATIONAL STATUS:</span>
             <span className="text-emerald-400 font-bold flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              RESOLVED
+              {isSensorAnomaly ? 'NO OUTAGE' : 'RESOLVED'}
             </span>
           </div>
           <div className="flex items-center justify-between text-gray-400 border-b border-[#30363D] pb-1.5">
-            <span>TELEMETRY VERIFIED:</span>
-            <span className="text-emerald-400 font-bold">100% SUCCESS (230 V)</span>
+            <span>{isSensorAnomaly ? 'PHYSICS VALIDATION:' : 'TELEMETRY VERIFIED:'}</span>
+            <span className="text-emerald-400 font-bold">
+              {isSensorAnomaly ? 'DOWNSTREAM POLES ENERGIZED' : 'RESTORATION CONFIRMED'}
+            </span>
           </div>
           <div className="flex items-center justify-between text-gray-400 border-b border-[#30363D] pb-1.5">
-            <span>TICKET LIFECYCLE:</span>
-            <span className="text-emerald-400 font-bold">CLOSED AUTOMATICALLY</span>
+            <span>{isSensorAnomaly ? 'DISPATCH STATUS:' : 'TICKET LIFECYCLE:'}</span>
+            <span className="text-emerald-400 font-bold">
+              {isSensorAnomaly ? 'NOT DEPLOYED' : 'CLOSED'}
+            </span>
           </div>
           <div className="flex items-center justify-between text-gray-400">
-            <span>RESTORED POLES:</span>
-            <span className="text-emerald-400 font-bold">ALL NODES ENERGIZED</span>
+            <span>{isSensorAnomaly ? 'FOLLOW-UP:' : 'GRID STATUS:'}</span>
+            <span className="text-emerald-400 font-bold">
+              {isSensorAnomaly ? 'ROUTINE SENSOR INSPECTION' : 'NORMAL OPERATION'}
+            </span>
           </div>
         </div>
-        <p className="text-gray-500 text-[10px] mt-4">
-          Click <strong className="text-gray-300">RESET GRID</strong> or select another scenario from the dropdown to continue.
-        </p>
+        <p className="text-gray-500 text-[10px] mt-4">RESET TO LIVE GRID WHEN READY.</p>
       </aside>
     );
   }
@@ -243,12 +278,14 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
   }
 
   const decisionCard = activeIncident.decisionCard;
-  const matchingTicket = tickets.find((t) => t.incidentId === activeIncident?.id) || {
+  const matchingTicket = isSensorAnomaly
+    ? undefined
+    : tickets.find((t) => t.incidentId === activeIncident?.id) || {
     id: 'TCK-GUIDED-001',
     incidentId: 'INC-GUIDED-01',
     assignedCrewId: 'crew-01',
     status: (currentStepIndex >= 3 ? 'ASSIGNED' : 'DETECTED') as any,
-  };
+    };
 
   const handleStatusChange = async (targetStatus: string) => {
     if (!matchingTicket) return;
@@ -384,7 +421,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
         </div>
 
         {/* Repair Ticket Workflow */}
-        <div className="pt-3 border-t-2 border-[#30363D] space-y-3">
+        {!isSensorAnomaly && <div className="pt-3 border-t-2 border-[#30363D] space-y-3">
           <div className="flex items-center justify-between">
             <div className="font-bold text-gray-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
               <Wrench className="w-4 h-4 text-emerald-400" />
@@ -456,7 +493,7 @@ export const FaultAssessmentPanel: React.FC<Props> = ({
               </div>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </aside>
   );

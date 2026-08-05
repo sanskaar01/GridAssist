@@ -29,6 +29,53 @@ export const ActiveFaultQueue: React.FC<Props> = ({
       (activeScript.id === 'power-restoration' && currentStepIndex <= 1));
 
   if (hasActiveOutageStep) {
+    if (activeScript.id === 'severe-weather') {
+      const spanActive = currentStepIndex >= 2 && currentStepIndex <= 5;
+      const dtActive = currentStepIndex >= 3 && currentStepIndex <= 6;
+      const isAssigned = currentStepIndex >= 5;
+
+      if (spanActive) {
+        guidedIncidents.push({
+          id: 'INC-STORM-SPAN-P004', faultType: 'SPAN', transformerId: 'dt-fallback-01',
+          suspectedParentPoleId: 'P-003', suspectedChildPoleId: 'P-004', confidence: 'HIGH',
+          evidence: { items: ['P-003 energized', 'P-004 de-energized', 'P-005/P-006 parallel branch energized'] },
+          assumptions: { items: ['Independent LT span outage'] }, rejectedAlternatives: { items: [] },
+          recommendedAction: 'Dispatch CREW-BLR-01 to Span P-003 → P-004.', affectedPoles: 1,
+          latitude: 12.9716, longitude: 77.6412, pincode: '560078', status: 'ACTIVE',
+          detectedAt: new Date().toISOString(), lastObservedAt: new Date().toISOString(),
+          decisionCard: {
+            id: 'DEC-STORM-SPAN', transformerId: 'dt-fallback-01', transformerCode: 'D-0101', faultType: 'SPAN',
+            suspectedParentPoleCode: 'P-003', suspectedChildPoleCode: 'P-004', confidence: 'HIGH',
+            confidenceReason: 'Live/dark frontier isolated on a surveyed branch.', latitude: 12.9716, longitude: 77.6412,
+            pincode: '560078', affectedPolesCount: 1, affectedPoleIds: ['P-004'], evidence: ['P-003 live', 'P-004 dark'],
+            assumptions: ['Parallel branch remains energized'], rejectedAlternatives: [],
+            recommendedAction: { title: isAssigned ? 'CREW-BLR-01 Assigned' : 'Assign LT Line Crew', detail: 'Span P-003 → P-004, Ward W-084.', targetCoordinates: { latitude: 12.9716, longitude: 77.6412 }, estimatedInspectionDistanceMeters: 45 },
+            explanation: 'Independent span fault.',
+          },
+        });
+      }
+
+      if (dtActive) {
+        guidedIncidents.push({
+          id: 'INC-STORM-DT-D0102', faultType: 'DT', transformerId: 'dt-fallback-02',
+          suspectedParentPoleId: 'D-0102', suspectedChildPoleId: 'P-026', confidence: 'HIGH',
+          evidence: { items: ['Feeder F-07 energized', 'D-0102 output lost', '20 downstream poles de-energized'] },
+          assumptions: { items: ['Independent transformer outage'] }, rejectedAlternatives: { items: [] },
+          recommendedAction: 'Dispatch CREW-BLR-02 to Transformer D-0102.', affectedPoles: 20,
+          latitude: 12.9725, longitude: 77.6425, pincode: '560078', status: 'ACTIVE',
+          detectedAt: new Date().toISOString(), lastObservedAt: new Date().toISOString(),
+          decisionCard: {
+            id: 'DEC-STORM-DT', transformerId: 'dt-fallback-02', transformerCode: 'D-0102', faultType: 'DT',
+            suspectedParentPoleCode: 'D-0102', suspectedChildPoleCode: 'P-026', confidence: 'HIGH',
+            confidenceReason: 'Entire D-0102 service area dark while feeder remains energized.', latitude: 12.9725, longitude: 77.6425,
+            pincode: '560078', affectedPolesCount: 20, affectedPoleIds: [], evidence: ['Feeder live', 'D-0102 output lost'],
+            assumptions: ['No internal fault frontier'], rejectedAlternatives: [],
+            recommendedAction: { title: isAssigned ? 'CREW-BLR-02 Assigned' : 'Assign HT Crew', detail: 'Transformer D-0102, Ward W-085.', targetCoordinates: { latitude: 12.9725, longitude: 77.6425 }, estimatedInspectionDistanceMeters: 45 },
+            explanation: 'Independent distribution transformer failure.',
+          },
+        });
+      }
+    } else {
     const isDTFault = activeScript.category === 'DT_FAULT';
     const parentCode = currentStep?.expectedState?.isolatedSpan?.parentCode || currentStep?.narration?.isolatedSpan?.parentCode || 'P-003';
     const childCode = currentStep?.expectedState?.isolatedSpan?.childCode || currentStep?.narration?.isolatedSpan?.childCode || 'P-004';
@@ -117,6 +164,7 @@ export const ActiveFaultQueue: React.FC<Props> = ({
         explanation: 'Deterministic graph traversal algorithm identified exact conductor break.',
       },
     });
+    }
   }
 
   const displayIncidents = incidents.length > 0 ? incidents : guidedIncidents;
@@ -231,7 +279,13 @@ export const ActiveFaultQueue: React.FC<Props> = ({
                     <span className="text-gray-400">({transformerCode})</span>
                   </div>
 
-                  {activeScript.id === 'power-restoration' ? (
+                  {activeScript.id === 'severe-weather' ? (
+                    <span className={`px-1.5 py-0.2 text-[10px] rounded border font-bold ${
+                      currentStepIndex >= 5 ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    }`}>
+                      {currentStepIndex >= 5 ? 'ASSIGNED' : 'AWAITING DISPATCH'}
+                    </span>
+                  ) : activeScript.id === 'power-restoration' ? (
                     <span className={`px-1.5 py-0.2 text-[10px] rounded border font-bold ${
                       currentStepIndex === 0
                         ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'

@@ -165,7 +165,7 @@ export const SimulationControlPanel: React.FC<Props> = ({ onGridReset }) => {
           className="bg-[#161B22] hover:bg-[#21262D] text-gray-300 px-2.5 py-1 rounded border border-[#30363D] flex items-center gap-1 hover:text-white text-[11px]"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>RESET GRID</span>
+          <span>RESET TO LIVE GRID</span>
         </button>
       </div>
     </div>

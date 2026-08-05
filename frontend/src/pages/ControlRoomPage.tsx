@@ -14,6 +14,8 @@ export const ControlRoomPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const gridResetToken = useSimulationStore((state) => state.gridResetToken);
+  const activeScriptId = useSimulationStore((state) => state.activeScript.id);
+  const currentStepIndex = useSimulationStore((state) => state.currentStepIndex);
 
   const loadData = useCallback(async (options?: { clearSelection?: boolean }) => {
     try {
@@ -54,8 +56,28 @@ export const ControlRoomPage: React.FC = () => {
   // Sync dashboard, fault queue, ticket queue, and timeline after Reset Grid
   useEffect(() => {
     if (gridResetToken === 0) return;
+    // Clear locally before the refresh completes so no stale incident, ticket,
+    // or focused fault remains visible during the reset round trip.
+    setSelectedIncident(null);
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            activeIncidents: [],
+            activeTickets: [],
+          }
+        : current
+    );
     loadData({ clearSelection: true });
   }, [gridResetToken, loadData]);
+
+  // The span ticket closes before the transformer ticket in the storm flow.
+  // Remove its selection as soon as its restoration telemetry is confirmed.
+  useEffect(() => {
+    if (activeScriptId === 'severe-weather' && currentStepIndex >= 6) {
+      setSelectedIncident((current) => current?.id === 'INC-STORM-SPAN-P004' ? null : current);
+    }
+  }, [activeScriptId, currentStepIndex]);
 
   if (loading && !data) {
     return (

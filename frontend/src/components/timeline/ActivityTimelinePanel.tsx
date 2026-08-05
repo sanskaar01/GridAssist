@@ -12,59 +12,71 @@ import { useSimulationStore } from '../../store/useSimulationStore';
 export const ActivityTimelinePanel: React.FC<Props> = ({ selectedIncident, matchingTicket }) => {
   const { activeScript, currentStepIndex, isCompleted } = useSimulationStore();
 
-  // Guided Mode / Scenario 4 Chronological Timeline Proof Builder
-  const guidedTimeline: Array<{ timestamp: string; event: string; details: string }> = [];
+  // Guided-mode operational log. Entries are only revealed once their scripted
+  // operational milestone has occurred; no inferred or decorative events.
+  const timelineDefinitions: Record<string, Array<{ atStep: number; event: string; details: string }>> = {
+    'single-span-fault': [
+      { atStep: 1, event: 'Telemetry Received', details: 'P-004 reported POWER_LOST; P-003 remains energized' },
+      { atStep: 2, event: 'Topology Validated', details: 'P-005 and P-006 remain energized on a separate branch' },
+      { atStep: 3, event: 'Fault Localized', details: 'Fault frontier isolated: Span P-003 → P-004' },
+      { atStep: 4, event: 'Crew Assigned', details: 'CREW-BLR-01 assigned to repair ticket' },
+      { atStep: 5, event: 'Power Restored', details: 'POWER_RESTORED telemetry received from affected poles' },
+      { atStep: 5, event: 'Ticket Closed', details: 'Restoration verified from telemetry' },
+    ],
+    'transformer-failure': [
+      { atStep: 1, event: 'HT Fuse Failure', details: 'D-0102 secondary output lost at root pole P-026' },
+      { atStep: 2, event: 'Transformer Output Lost', details: '20 downstream poles de-energized under D-0102' },
+      { atStep: 3, event: 'Transformer Fault Confirmed', details: 'Feeder healthy; outage isolated to D-0102' },
+      { atStep: 4, event: 'HT Crew Assigned', details: 'CREW-BLR-02 assigned to D-0102' },
+      { atStep: 5, event: 'Supply Restored', details: 'All 20 poles report restored supply' },
+      { atStep: 5, event: 'Ticket Closed', details: 'Restoration verified from telemetry' },
+    ],
+    'sensor-failure': [
+      { atStep: 1, event: 'Telemetry Received', details: 'P-003 reported POWER_LOST while children remain energized' },
+      { atStep: 2, event: 'Physics Validation', details: 'Live downstream poles rule out a conductor outage' },
+      { atStep: 2, event: 'False Alarm Blocked', details: 'No outage ticket created; emergency dispatch cancelled' },
+      { atStep: 2, event: 'Routine Inspection Recommended', details: 'Sensor DEV-W084-D0101-P003 flagged for maintenance' },
+      { atStep: 3, event: 'Sensor Heartbeat Restored', details: 'P-003 resumed normal heartbeat reporting' },
+    ],
+    'power-restoration': [
+      { atStep: 0, event: 'Telemetry Ingested', details: 'P-004 emitted POWER_LOST; span outage active' },
+      { atStep: 0, event: 'Fault Localized', details: 'Fault frontier isolated: Span P-003 → P-004' },
+      { atStep: 0, event: 'Crew Dispatched', details: 'CREW-BLR-01 assigned to repair ticket' },
+      { atStep: 1, event: 'Repair Claim Rejected', details: 'Verification held; affected sensors still report 0 V' },
+      { atStep: 2, event: 'Power Restored', details: 'POWER_RESTORED telemetry received from affected poles' },
+      { atStep: 3, event: 'Ticket Closed', details: 'Restoration verified from telemetry' },
+    ],
+    'severe-weather': [
+      { atStep: 1, event: 'Telemetry Surge', details: 'Concurrent weather-related POWER_LOST telemetry received' },
+      { atStep: 2, event: 'Span Fault Localized', details: 'Fault frontier isolated: Span P-003 → P-004' },
+      { atStep: 3, event: 'DT Failure Localized', details: 'D-0102 outage grouped separately from the span fault' },
+      { atStep: 5, event: 'Crew BLR-01 Assigned', details: 'LT line crew assigned to Span P-003 → P-004' },
+      { atStep: 5, event: 'Crew BLR-02 Assigned', details: 'HT crew assigned to Transformer D-0102' },
+      { atStep: 6, event: 'Span Restored', details: 'P-004 restoration telemetry verified; span ticket closed' },
+      { atStep: 7, event: 'Transformer Restored', details: 'D-0102 restoration telemetry verified' },
+      { atStep: 7, event: 'Ticket Closed', details: 'Final storm outage cleared' },
+    ],
+  };
 
-  if (activeScript.id === 'power-restoration') {
-    guidedTimeline.push({
-      timestamp: '13:20:41',
-      event: 'Telemetry Ingested',
-      details: 'DEV-W084-D0101-P004 emitted POWER_LOST (0 V)',
-    });
-    if (currentStepIndex >= 0) {
-      guidedTimeline.push({
-        timestamp: '13:20:43',
-        event: 'Fault Localized',
-        details: 'Isolated Fault Frontier: Span P-003 -> P-004',
-      });
-      guidedTimeline.push({
-        timestamp: '13:20:45',
-        event: 'Crew Dispatched',
-        details: 'Ticket TCK-SPAN-P004 ASSIGNED to CREW-BLR-01',
-      });
-    }
-    if (currentStepIndex >= 1) {
-      guidedTimeline.push({
-        timestamp: '13:20:48',
-        event: 'Repair Claimed',
-        details: 'Verification REJECTED — Sensors still report 0 V',
-      });
-    }
-    if (currentStepIndex >= 2) {
-      guidedTimeline.push({
-        timestamp: '13:20:50',
-        event: 'Telemetry Verified',
-        details: 'POWER_RESTORED packet ingested (230 V restored)',
-      });
-    }
-    if (currentStepIndex >= 3 || isCompleted) {
-      guidedTimeline.push({
-        timestamp: '13:20:51',
-        event: 'Ticket Closed',
-        details: 'Status VERIFYING -> VERIFIED -> CLOSED',
-      });
-    }
-  }
+  const guidedTimeline = (timelineDefinitions[activeScript.id] || [])
+    .filter((entry) => entry.atStep <= currentStepIndex || (isCompleted && entry.atStep < activeScript.steps.length))
+    .map((entry, index) => ({
+      timestamp: new Date(Date.UTC(2026, 6, 29, 13, 20, 41 + index * 2)).toISOString(),
+      event: entry.event,
+      details: entry.details,
+    }));
 
-  // Extract timeline events from incident evidence object
-  const rawTimeline = selectedIncident?.evidence?.timeline || guidedTimeline;
+  // During a scripted scenario, the timeline is the scenario's own operational
+  // record. Live incident evidence remains the fallback outside those flows.
+  const isScriptedTimeline = guidedTimeline.length > 0;
+  const rawTimeline = isScriptedTimeline ? guidedTimeline : selectedIncident?.evidence?.timeline || [];
 
   // Complement with ticket status milestones
   const mergedTimeline = [...rawTimeline];
 
-  if (matchingTicket?.assignedCrew && selectedIncident) {
+  if (matchingTicket?.assignedCrew) {
     mergedTimeline.push({
-      timestamp: selectedIncident.detectedAt,
+      timestamp: selectedIncident?.detectedAt || new Date().toISOString(),
       event: 'Crew Assigned',
       details: `Assigned repair unit ${matchingTicket.assignedCrew.code} (${matchingTicket.assignedCrew.name})`,
     });
@@ -94,7 +106,7 @@ export const ActivityTimelinePanel: React.FC<Props> = ({ selectedIncident, match
       <div className="flex items-center justify-between text-[11px] font-bold text-gray-400 border-b border-[#21262D] pb-1">
         <span className="flex items-center gap-1.5 text-gray-200">
           <Clock className="w-3.5 h-3.5 text-blue-400" />
-          ACTIVITY TIMELINE — {selectedIncident ? `INCIDENT #${selectedIncident.id.substring(0, 8)}` : 'NO ACTIVE INCIDENT'}
+          ACTIVITY TIMELINE — INCIDENT #{selectedIncident ? selectedIncident.id.substring(0, 8) : 'S04-RESTORATION'}
         </span>
         <span className="text-gray-400">CHRONOLOGICAL EVENT LOG</span>
       </div>
