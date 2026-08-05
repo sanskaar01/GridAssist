@@ -626,16 +626,43 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           }
         } else {
           // Pole Node with 1.8s Dark Radial Pulse (SSOT: ELECTRICAL_EFFECTS_SPEC.md)
-          const isDark = node.isDark;
+          const isSensorAnomalyMode = activeScript.category === 'SENSOR_ANOMALY' && currentStepIndex >= 1 && currentStepIndex <= 2 && node.code === 'P-003';
+          const isDark = node.isDark && !isSensorAnomalyMode;
 
-          if (node.isSensorAnomaly) {
-            // SENSOR ANOMALY: Amber Warning Ring
-            ctx.fillStyle = '#F59E0B';
+          if (isSensorAnomalyMode || node.isSensorAnomaly) {
+            // SENSOR ANOMALY: Live Green Pole Node + Pulsing Amber Warning Ring
+            const ringPulse = 10 + 4 * Math.sin(animTimeRef.current * 5);
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 2.5;
             ctx.shadowColor = '#F59E0B';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = ringPulse;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 11, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner Pole Circle remains LIVE Green (#10B981)
+            ctx.fillStyle = '#10B981';
+            ctx.shadowColor = '#10B981';
+            ctx.shadowBlur = 6;
             ctx.beginPath();
             ctx.arc(node.x, node.y, 7, 0, Math.PI * 2);
             ctx.fill();
+
+            // Badge Overlay for Sensor Anomaly
+            const badgeX = node.x + 14;
+            const badgeY = node.y - 10;
+            ctx.fillStyle = 'rgba(13, 17, 23, 0.92)';
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(badgeX, badgeY, 150, 18, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#FBBF24';
+            ctx.font = 'bold 9px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText('⚠ SENSOR ANOMALY (POWER LIVE)', badgeX + 5, badgeY + 12);
           } else if (isDark) {
             // DARK OUTAGE POLE: 1.8s Radial Pulse Sine Wave R(t) = 7 * (1 + 0.25 * sin(2pi t / 1.8))
             const pulseScale = 1 + 0.25 * Math.sin((2 * Math.PI * animTimeRef.current) / 1.8);
@@ -662,7 +689,7 @@ export const ElectricalTopologyCanvas: React.FC<Props> = ({
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          ctx.fillStyle = node.isSensorAnomaly ? '#FBBF24' : isDark ? '#FCA5A5' : '#8B949E';
+          ctx.fillStyle = isSensorAnomalyMode || node.isSensorAnomaly ? '#FBBF24' : isDark ? '#FCA5A5' : '#8B949E';
           ctx.font = '10px monospace';
           ctx.textAlign = 'center';
           ctx.fillText(node.code, node.x, node.y + 16);
